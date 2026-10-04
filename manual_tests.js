@@ -1,10 +1,9 @@
 /* ==========================================================================
-   MANUAL TEST SUITE v40 (Panel Consistency)
-   - Fix: syncToApp now also refreshes the panel's own slider/pos readouts
-     (they showed stale boot values, e.g. MASTER 0% while dashboard showed 100%)
-   - Fix: power toggle button now shows ON/OFF state + log line (was unresponsive-looking)
-   - Fix: monitor rows have aria-labels
-   - Inherits v39: parse-time interceptor install (boot-race fix)
+   MANUAL TEST SUITE v41 (Test Isolation)
+   - Fix: test 1.1 setup now calls forceReset (it was the only test that didn't;
+     a previous test's in-flight move left State.movingRooms set, failing the
+     quiescent button-state check on re-run)
+   - Inherits v40: panel consistency; v39: parse-time interceptor install
    ========================================================================== */
 
 const SimDash = {
@@ -66,6 +65,11 @@ const SimDash = {
             id: 1.1, name: "1.1 Button Limits", 
             instruct: "<b>MANUAL:</b> Check Arrow disabled states at 0% and 100%.",
             setup: async () => {
+                // v41: reset movement state first — a previous test's move may
+                // still be in flight (movingRooms set), which would fail the
+                // quiescent button-state check below.
+                SimDash.forceReset('kid');
+                SimDash.forceReset('master');
                 SimDash.VirtualState.kid.pos = 0; SimDash.VirtualState.master.pos = 100;
                 SimDash.syncToApp('kid'); SimDash.syncToApp('master');
             },
