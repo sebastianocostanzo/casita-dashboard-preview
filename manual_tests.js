@@ -1,8 +1,10 @@
 /* ==========================================================================
-   MANUAL TEST SUITE v38 (Full Sim Coverage)
-   - Feature: TV interception (Sony Bravia, hardcoded IP in App.tv)
-   - Feature: SmartThings cloud API mock (Play/Pause bridge)
-   - Note: v38 is the single sim layer; App-level sim branches removed (no dual interception)
+   MANUAL TEST SUITE v40 (Panel Consistency)
+   - Fix: syncToApp now also refreshes the panel's own slider/pos readouts
+     (they showed stale boot values, e.g. MASTER 0% while dashboard showed 100%)
+   - Fix: power toggle button now shows ON/OFF state + log line (was unresponsive-looking)
+   - Fix: monitor rows have aria-labels
+   - Inherits v39: parse-time interceptor install (boot-race fix)
    ========================================================================== */
 
 const SimDash = {
@@ -19,11 +21,16 @@ const SimDash = {
     Network: { deadIPs: [] }, 
 
     init: () => {
+        // v39: install the fetch interceptor IMMEDIATELY (parse time), not on
+        // window.load. App.init runs on DOMContentLoaded (which fires BEFORE
+        // window.load) and issues finalize/syncTVPower calls — without this,
+        // those boot calls use the native fetch (real egress + console errors).
+        // The interceptor needs only CONFIG (already parsed); UI waits for load.
+        SimDash.setupInterceptors();
         window.addEventListener('load', () => {
             window.SimDash = SimDash; 
             SimDash.injectStyles();
             SimDash.renderUI();
-            SimDash.setupInterceptors();
             setTimeout(() => {
                 if (window.isSimulationMode) SimDash.syncAllToApp();
                 SimDash.updateModeUI();
@@ -215,7 +222,8 @@ const SimDash = {
         if (!window.isSimulationMode) return alert("Switch to SIM MODE.");
         const dev = SimDash.VirtualState[id];
         dev.offline = !dev.offline;
-        SimDash.syncToApp(id);
+        SimDash.syncToApp(id); // v40: also refreshes the pwr button label
+        SimDash.log(`🔌 ${id.toUpperCase()} virtual power: ${dev.offline ? 'OFFLINE' : 'ONLINE'}`, "SYSTEM");
     },
     updatePosFromSlider: (id, val) => {
         if (!window.isSimulationMode) return;
@@ -251,6 +259,24 @@ const SimDash = {
             if (id === 'awning') bar.style.width = `${v.pos}%`;
             else bar.style.height = `${v.pos}%`;
         }
+        // v40: keep the panel's OWN monitor readouts in sync too (they kept
+        // showing stale boot values while the dashboard showed the truth).
+        const sl = document.getElementById(`slider-${id}`);
+        if (sl) sl.value = v.pos;
+        const po = document.getElementById(`pos-${id}`);
+        if (po) po.innerText = `${v.pos}%`;
+        SimDash.refreshPwrBtn(id);
+    },
+
+    // v40: the power toggle gave no visual feedback — the button label now
+    // always reflects the virtual offline state.
+    refreshPwrBtn: (id) => {
+        const btn = document.getElementById(`pwr-btn-${id}`);
+        if (!btn || !SimDash.VirtualState[id]) return;
+        const off = SimDash.VirtualState[id].offline;
+        btn.innerText = off ? 'OFF' : 'ON';
+        btn.style.background = off ? '#ff5555' : '#00aa55';
+        btn.style.color = '#fff';
     },
     
     // --- 4. ENGINE CORE ---
@@ -419,9 +445,11 @@ const SimDash = {
 
         Object.keys(SimDash.VirtualState).forEach(id => {
             const row = document.createElement('div'); row.className = "mon-row";
+            row.setAttribute('role', 'group');
+            row.setAttribute('aria-label', `Virtual device ${id}`); // v40: a11y label
             row.innerHTML = `
                 <div style="width:50px;">${id.toUpperCase()}</div>
-                <input type="range" id="slider-${id}" class="sim-slider" min="0" max="100" value="0">
+                <input type="range" id="slider-${id}" class="sim-slider" min="0" max="100" value="0" aria-label="${id} virtual position">
                 <span id="pos-${id}" style="width:30px; text-align:right;">0%</span>
                 <button id="pwr-btn-${id}" class="sim-btn-small" style="width:35px; font-weight:bold; border:none; border-radius:3px;">ON</button>
             `;
@@ -429,6 +457,7 @@ const SimDash = {
 
             document.getElementById(`slider-${id}`).oninput = (e) => SimDash.updatePosFromSlider(id, e.target.value);
             document.getElementById(`pwr-btn-${id}`).onclick = () => SimDash.toggleOffline(id);
+            SimDash.refreshPwrBtn(id); // v40: correct initial label (sofa starts offline)
         });
 
         const trig = document.createElement('button'); trig.id = 'sim-dash-trigger'; trig.innerText = '🛠️ TEST';
