@@ -103,19 +103,23 @@
   .tline { position: absolute; left: 0; right: 0; height: 4px; background: #fff; border-radius: 2px; opacity: 0; transition: opacity .3s; }
   .tline.visible { opacity: .9; }
 
-  .btnrow { display: flex; gap: 10px; width: 100%; }
-  .act {
-    flex: 1; min-height: 64px; border-radius: 16px; cursor: pointer;
-    font-size: 19px; font-weight: 800; color: var(--ink); padding: 0 6px;
-    border: 3px solid; background: var(--card2);
+  .btnrow { display: flex; gap: 12px; width: 100%; }
+  /* White rocker switches, like the physical wall buttons: tap = go,
+     tap again = stop, tap the other one = turn around. No stop button. */
+  .wbtn {
+    flex: 1; min-height: 76px; border-radius: 18px; cursor: pointer;
+    background: linear-gradient(180deg, #ffffff, #e9e9e9);
+    border: 2px solid #c9c9c9;
+    box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 1px 0 #ffffff;
+    display: flex; align-items: center; justify-content: center; padding: 0;
   }
-  .act.open { border-color: var(--green); }
-  .act.open:active { background: var(--green-deep); }
-  .act.close { border-color: var(--amber-deep); }
-  .act.close:active { background: #6b3a20; }
-  .act.stop { border-color: #8a6a4a; }
-  .room-card.moving .act.stop { border-color: var(--amber); animation: stopulse 1s infinite; }
-  @keyframes stopulse { 0%,100% { transform: scale(1); background: var(--card2); } 50% { transform: scale(1.05); background: #5a3d1c; } }
+  .wbtn svg { width: 36px; height: 36px; }
+  .wbtn:active { background: #dcdcdc; }
+  .wbtn.moving { border-color: var(--amber); animation: wpulse 1.1s infinite; }
+  @keyframes wpulse {
+    0%,100% { box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 1px 0 #fff; }
+    50% { box-shadow: 0 0 0 5px rgba(240,162,74,.55), 0 3px 8px rgba(0,0,0,.35); }
+  }
   .room-card.offline { opacity: .45; }
 
   /* ---------- awning (full width) ---------- */
@@ -130,7 +134,7 @@
     background: linear-gradient(90deg, var(--amber), var(--amber-deep)); transition: width .25s; }
   .bar.h .tline { top: 0; bottom: 0; left: auto; right: auto; width: 4px; height: auto; }
   .awning-inner .btnrow { width: auto; }
-  .awning-inner .act { min-width: 100px; }
+  .awning-inner .wbtn { min-width: 110px; }
   #awning-status { font-size: 14px; color: var(--ink-dim); }
   #sun-intel { font-size: 14px; color: var(--ink-dim); }
 
@@ -241,7 +245,7 @@
   <div id="photo-desc">...</div>
 </div>
 
-<p class="hint">👆 Tap a direction and it goes there. Tap the <b>same</b> button to stop. Tap the <b>other</b> button to turn around — just like the buttons on the wall.</p>
+<p class="hint">👆 Tap ▲ to open — tap it again to stop. Tap ▼ to turn around. Just like the buttons on the wall.</p>
 
 <div class="rooms">
   <section class="room-column room-card" data-room="kid" id="card-kid">
@@ -250,9 +254,8 @@
       <div id="prog-kid" class="fill"></div><div id="target-kid" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="pressDir('kid','Open')">Open</button>
-      <button class="act stop" onclick="App.cover('kid','Stop')">Stop</button>
-      <button class="act close" onclick="pressDir('kid','Close')">Close</button>
+      <button class="wbtn" id="wb-kid-up" onclick="pressDir('kid','Open')" aria-label="Open Kid's Room"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+      <button class="wbtn" id="wb-kid-down" onclick="pressDir('kid','Close')" aria-label="Close Kid's Room"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
     </div>
   </section>
 
@@ -262,9 +265,8 @@
       <div id="prog-master" class="fill"></div><div id="target-master" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="pressDir('master','Open')">Open</button>
-      <button class="act stop" onclick="App.cover('master','Stop')">Stop</button>
-      <button class="act close" onclick="pressDir('master','Close')">Close</button>
+      <button class="wbtn" id="wb-master-up" onclick="pressDir('master','Open')" aria-label="Open Master Bedroom"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+      <button class="wbtn" id="wb-master-down" onclick="pressDir('master','Close')" aria-label="Close Master Bedroom"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
     </div>
   </section>
 
@@ -274,9 +276,8 @@
       <div id="prog-tv_area" class="fill"></div><div id="target-tv_area" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="pressDir('tv_area','Open')">Open</button>
-      <button class="act stop" onclick="App.cover('tv_area','Stop')">Stop</button>
-      <button class="act close" onclick="pressDir('tv_area','Close')">Close</button>
+      <button class="wbtn" id="wb-tv_area-up" onclick="pressDir('tv_area','Open')" aria-label="Open TV Area"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+      <button class="wbtn" id="wb-tv_area-down" onclick="pressDir('tv_area','Close')" aria-label="Close TV Area"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
     </div>
   </section>
 
@@ -286,9 +287,8 @@
       <div id="prog-sofa" class="fill"></div><div id="target-sofa" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="pressDir('sofa','Open')">Open</button>
-      <button class="act stop" onclick="App.cover('sofa','Stop')">Stop</button>
-      <button class="act close" onclick="pressDir('sofa','Close')">Close</button>
+      <button class="wbtn" id="wb-sofa-up" onclick="pressDir('sofa','Open')" aria-label="Open Sofa"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+      <button class="wbtn" id="wb-sofa-down" onclick="pressDir('sofa','Close')" aria-label="Close Sofa"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
     </div>
   </section>
 </div>
@@ -300,9 +300,8 @@
       <div id="prog-awning" class="fill"></div><div id="target-awning" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="pressDir('awning','Open')">Out</button>
-      <button class="act stop" onclick="App.cover('awning','Stop')">Stop</button>
-      <button class="act close" onclick="pressDir('awning','Close')">In</button>
+      <button class="wbtn" id="wb-awning-down" onclick="pressDir('awning','Close')" aria-label="Retract awning"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M4 12 L18 3 V21 Z"/></svg></button>
+      <button class="wbtn" id="wb-awning-up" onclick="pressDir('awning','Open')" aria-label="Extend awning"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linejoin="round"><path d="M20 12 L6 3 V21 Z"/></svg></button>
     </div>
   </div>
   <div style="margin-top:6px"><b id="awning-status">...</b> <span id="sun-intel"></span></div>
@@ -540,6 +539,12 @@
       pill.textContent = LABELS[st];
       pill.className = "state-pill" + (st === "open" ? " open" : st === "moving" ? " moving" : "");
       card.classList.toggle("moving", st === "moving");
+      var mv = null;
+      try { mv = (typeof State !== "undefined" && State.movingRooms) ? State.movingRooms[id] : null; } catch (e) {}
+      var upB = document.getElementById("wb-" + id + "-up");
+      var dnB = document.getElementById("wb-" + id + "-down");
+      if (upB) upB.classList.toggle("moving", mv === "up");
+      if (dnB) dnB.classList.toggle("moving", mv === "down");
     });
   }
   setInterval(paintStates, 800);
