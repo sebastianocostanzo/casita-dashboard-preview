@@ -369,6 +369,10 @@
 
   var forcedSim = window.__PREVIEW_FORCED_SIM === true;
   var isSim = forcedSim || new URLSearchParams(location.search).has("sim");
+  // In the public preview the devices are unreachable, so "real" is rehearsed:
+  // full PIN + confirmation + amber banner, simulated underneath.
+  var practiceReal = false;
+  function isReal() { return practiceReal || !isSim; }
 
   var banner = document.getElementById("mode-banner");
   var btnPretend = document.getElementById("btn-pretend");
@@ -380,12 +384,15 @@
   var modalNo = document.getElementById("modal-no");
 
   function paintMode() {
-    banner.className = isSim ? "pretend" : "real";
-    banner.innerHTML = isSim
-      ? "🧪 <b>PRETEND</b> — nothing moves, tap freely and explore"
-      : "🏠 <b>REAL</b> — shutters and the awning really move";
-    btnPretend.className = isSim ? "active-pretend" : "";
-    btnReal.className = isSim ? "" : "active-real";
+    var real = isReal();
+    banner.className = real ? "real" : "pretend";
+    banner.innerHTML = real
+      ? (practiceReal
+          ? "🏠 <b>REAL</b> — practice: on the home kiosk this moves real shutters"
+          : "🏠 <b>REAL</b> — shutters and the awning really move")
+      : "🧪 <b>PRETEND</b> — nothing moves, tap freely and explore";
+    btnPretend.className = real ? "" : "active-pretend";
+    btnReal.className = real ? "active-real" : "";
   }
 
   function showModal(title, text, yesLabel, noLabel, onYes) {
@@ -405,6 +412,7 @@
   function hideModal() { modal.classList.add("hidden"); }
 
   window.setModePretend = function () {
+    if (practiceReal) { practiceReal = false; paintMode(); return; }
     if (isSim) return;
     location.search = "?sim";
   };
@@ -438,9 +446,11 @@
       hidePin();
       showModal(
         "Switch to REAL mode?",
-        "This will move real shutters and the awning. Continue?",
+        forcedSim
+          ? "Practice run: on the home kiosk this moves real shutters and the awning. Continue?"
+          : "This will move real shutters and the awning. Continue?",
         "Yes, make it real", "Stay pretending",
-        function () { location.href = location.pathname; }
+        function () { enterReal(); }
       );
     } else {
       pinMsg.textContent = "Hmm, that's not it — try again.";
@@ -465,17 +475,23 @@
   window.pinCancel = function () { hidePin(); };
 
   window.askModeReal = function () {
-    if (!isSim) return;
+    if (isReal()) return;
     if (forcedSim) {
-      showModal(
-        "Pretend-only preview",
-        "Real mode only works on the home kiosk — this preview is pretend-only.",
-        "Got it", null, function () {}
-      );
+      // Public preview: rehearse the real-mode experience, simulated underneath.
+      openPin();
       return;
     }
     openPin();
   };
+
+  function enterReal() {
+    if (forcedSim) {
+      practiceReal = true;
+      paintMode();
+      return;
+    }
+    location.href = location.pathname;
+  }
 
   /* ---- live state pills + pulsing Stop ---- */
   var ROOMS = ["kid", "master", "tv_area", "sofa", "awning"];
