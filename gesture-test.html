@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gesture Test — MediaPipe</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #0b0e14; color: #eef2f7;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 16px; gap: 14px; min-height: 100%;
+  }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: .04em; }
+  .sub { font-size: 18px; color: #9aa7b8; text-align: center; max-width: 640px; }
+  #stage {
+    position: relative; width: min(92vw, 560px); aspect-ratio: 4/3;
+    background: #000; border-radius: 16px; overflow: hidden;
+    border: 2px solid #1e2634;
+  }
+  #video, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video { transform: scaleX(-1); object-fit: cover; }
+  #overlay { transform: scaleX(-1); }
+  #gesture-card {
+    width: min(92vw, 560px); background: #141a26; border: 2px solid #1e2634;
+    border-radius: 16px; padding: 18px; text-align: center;
+  }
+  #gesture-name { font-size: 52px; font-weight: 800; letter-spacing: .03em; min-height: 76px; }
+  #gesture-conf { font-size: 22px; color: #9aa7b8; margin-top: 6px; min-height: 30px; }
+  #status { font-size: 20px; color: #ffd166; min-height: 28px; text-align: center; max-width: 640px; }
+  #status.ok { color: #7CFFB2; }
+  #status.err { color: #ff6b6b; }
+  #start-btn {
+    font-size: 26px; font-weight: 700; padding: 18px 44px; border-radius: 999px;
+    border: none; background: #2f81f7; color: #fff; cursor: pointer;
+  }
+  #start-btn:disabled { background: #3a4356; color: #8b94a5; cursor: default; }
+  #kiosk-note {
+    display: none; width: min(92vw, 560px); background: #2a1e10; border: 2px solid #b97a2a;
+    border-radius: 16px; padding: 16px 18px; font-size: 19px; line-height: 1.45; color: #ffd9a0;
+  }
+  #menu {
+    width: min(92vw, 560px); background: #10151f; border: 2px solid #1e2634;
+    border-radius: 16px; padding: 16px 18px;
+  }
+  #menu h2 { font-size: 22px; margin-bottom: 10px; }
+  #menu ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #menu li {
+    font-size: 19px; background: #1a2231; border-radius: 10px; padding: 10px 12px;
+    border: 1px solid #2a3548;
+  }
+  #menu li.hit { border-color: #7CFFB2; color: #7CFFB2; }
+  #back { font-size: 20px; color: #7aa2f7; text-decoration: none; margin-top: 4px; }
+  .tiny { font-size: 15px; color: #6b7688; text-align: center; max-width: 640px; }
+</style>
+</head>
+<body>
+  <h1>Gesture Test</h1>
+  <div class="sub">Show a hand to the camera — the page names the gesture it sees.</div>
+
+  <div id="kiosk-note"></div>
+
+  <div id="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div id="gesture-card">
+    <div id="gesture-name">—</div>
+    <div id="gesture-conf"></div>
+  </div>
+
+  <div id="status">Tap START to load the hand-tracking model and open the camera.</div>
+  <button id="start-btn">START</button>
+
+  <div id="menu">
+    <h2>Gestures it knows (pick your favorite)</h2>
+    <ul id="menu-list">
+      <li data-g="Open_Palm">Open palm</li>
+      <li data-g="Closed_Fist">Fist</li>
+      <li data-g="Thumb_Up">Thumbs up</li>
+      <li data-g="Thumb_Down">Thumbs down</li>
+      <li data-g="Pointing_Up">Pointing up</li>
+      <li data-g="Victory">Victory</li>
+      <li data-g="ILoveYou">I love you</li>
+      <li data-g="None">No hand</li>
+    </ul>
+  </div>
+
+  <a id="back" href="index.html">← Back to dashboard</a>
+  <div class="tiny">Hand tracking runs 100% on this device (MediaPipe, Google) — no video ever leaves the tablet. Model loads once from Google's servers (~9&nbsp;MB).</div>
+
+<script type="module">
+  // MediaPipe Tasks Vision — official CDN build + officially hosted model.
+  // Nothing is bundled: the model (~9 MB) loads once over HTTPS at START.
+  import { FilesetResolver, GestureRecognizer, DrawingUtils } from
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+  import { HandLandmarker } from
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+  const $ = id => document.getElementById(id);
+  const video = $('video'), canvas = $('overlay'), ctx = canvas.getContext('2d');
+  const nameEl = $('gesture-name'), confEl = $('gesture-conf'), statusEl = $('status');
+  const startBtn = $('start-btn'), menuItems = [...document.querySelectorAll('#menu-list li')];
+
+  const FRIENDLY = {
+    None: '—', Closed_Fist: 'FIST', Open_Palm: 'OPEN PALM',
+    Pointing_Up: 'POINTING UP', Thumb_Down: 'THUMB DOWN',
+    Thumb_Up: 'THUMB UP', Victory: 'VICTORY', ILoveYou: 'I LOVE YOU'
+  };
+
+  function setStatus(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = cls || '';
+  }
+  function markMenu(g) {
+    menuItems.forEach(li => li.classList.toggle('hit', li.dataset.g === g));
+  }
+
+  // Fully Kiosk detection: its WebView exposes window.fully.
+  // Per Fully's own docs, webcam access needs the paid PLUS license AND an
+  // HTTPS origin — this kiosk page loads from local files, so the camera
+  // cannot work here. Say so plainly instead of failing mysteriously.
+  if (typeof window.fully !== 'undefined') {
+    const n = $('kiosk-note');
+    n.style.display = 'block';
+    n.textContent = 'You are inside the Fully Kiosk app: the camera cannot work here ' +
+      '(Fully only allows webcam on paid PLUS + HTTPS pages, and this page loads from ' +
+      'local files). To try the gestures, open this same page in Chrome on the tablet.';
+  }
+
+  let recognizer = null, running = false, lastVideoTime = -1, drawUtils = null;
+
+  async function loadModel() {
+    setStatus('Loading hand-tracking model (~9 MB, one time)…');
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+    recognizer = await GestureRecognizer.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/' +
+          'gesture_recognizer/float16/1/gesture_recognizer.task',
+        delegate: 'CPU'   // safest on low-end tablet GPUs
+      },
+      runningMode: 'VIDEO',
+      numHands: 1
+    });
+    drawUtils = new DrawingUtils(ctx);
+  }
+
+  function sizeCanvas() {
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+  }
+
+  function loop() {
+    if (!running) return;
+    if (video.currentTime !== lastVideoTime && video.videoWidth > 0) {
+      lastVideoTime = video.currentTime;
+      try {
+        const res = recognizer.recognizeForVideo(video, performance.now());
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (res.landmarks && res.landmarks.length > 0) {
+          for (const lm of res.landmarks) {
+            drawUtils.drawConnectors(lm, HandLandmarker.HAND_CONNECTIONS,
+              { color: '#00FFAA', lineWidth: 4 });
+            drawUtils.drawLandmarks(lm, { color: '#FF0055', lineWidth: 2 });
+          }
+        }
+        if (res.gestures && res.gestures.length > 0 && res.gestures[0].length > 0) {
+          const g = res.gestures[0][0];
+          nameEl.textContent = FRIENDLY[g.categoryName] || g.categoryName;
+          confEl.textContent = Math.round(g.score * 100) + '% sure';
+          markMenu(g.categoryName);
+        } else {
+          nameEl.textContent = '—';
+          confEl.textContent = '';
+          markMenu('None');
+        }
+      } catch (e) { /* one bad frame must not kill the loop */ }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    try {
+      if (!recognizer) await loadModel();
+      setStatus('Starting camera…');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      sizeCanvas();
+      running = true;
+      setStatus('Show your hand to the camera.', 'ok');
+      startBtn.style.display = 'none';
+      requestAnimationFrame(loop);
+    } catch (e) {
+      const inKiosk = typeof window.fully !== 'undefined';
+      setStatus(inKiosk
+        ? 'Camera blocked: this is the Fully Kiosk limit described above — open this page in Chrome to test.'
+        : 'Could not open the camera (' + (e && e.name ? e.name : 'unknown error') +
+          '). Check the browser camera permission and try again.', 'err');
+      startBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
