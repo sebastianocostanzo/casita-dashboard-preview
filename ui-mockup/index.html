@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg0: #140d08; --bg1: #1c130c; --card: #2e2013; --card2: #3d2a17;
+    --line: #4a3520; --ink: #f7ead9; --ink-dim: #cbb99f;
+    --amber: #f0a24a; --amber-deep: #d96c4f;
+    --green: #4caf50; --green-deep: #2e6b34;
+    --red: #e05252;
+  }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 800px at 20% -10%, #3a2415 0%, var(--bg1) 55%, var(--bg0) 100%);
+    color: var(--ink); padding: 0 20px 28px;
+  }
+
+  /* ---------- mode banner (always visible) ---------- */
+  #mode-banner {
+    margin: 0 -20px 0; padding: 10px 20px; text-align: center;
+    font-size: 21px; font-weight: 700; letter-spacing: .3px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  #mode-banner.pretend { background: #1e4d2b; color: #c9f2d4; border-bottom: 3px solid var(--green); }
+  #mode-banner.real { background: #5a3a10; color: #ffe3b3; border-bottom: 3px solid var(--amber); }
+
+  header { display: flex; align-items: center; gap: 18px; padding: 14px 0 10px; flex-wrap: wrap; }
+  h1 { font-size: 44px; margin: 0; }
+  h1 small { display: block; font-size: 18px; font-weight: 400; color: var(--ink-dim); }
+
+  /* ---------- pretend/real toggle ---------- */
+  .mode-toggle {
+    display: flex; border: 3px solid var(--line); border-radius: 22px; overflow: hidden;
+    margin-left: auto;
+  }
+  .mode-toggle button {
+    min-height: 72px; padding: 0 30px; font-size: 24px; font-weight: 800; cursor: pointer;
+    border: none; background: #241a10; color: var(--ink-dim);
+  }
+  .mode-toggle button.active-pretend { background: var(--green-deep); color: #fff; }
+  .mode-toggle button.active-real { background: #8a5a17; color: #fff; }
+
+  .wx { text-align: right; font-size: 18px; line-height: 1.35; color: var(--ink-dim); }
+  .wx #temp { font-size: 28px; font-weight: 700; color: var(--ink); }
+  .clock { font-size: 36px; font-weight: 700; min-width: 130px; text-align: right; }
+  .badge {
+    display: inline-block; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+    background: #241a10; border: 2px solid var(--line); color: var(--ink-dim);
+    border-radius: 999px; padding: 6px 16px; margin-bottom: 10px;
+  }
+
+  /* ---------- photo banner ---------- */
+  .photo-banner {
+    position: relative; height: 150px; border-radius: 24px; overflow: hidden;
+    border: 2px solid var(--line); margin-bottom: 12px; background: #241a10;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35);
+  }
+  .slide-container { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
+  .slide-container.active { opacity: 1; }
+  .blur-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(24px) brightness(.6); }
+  .sharp-img { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; }
+  #photo-desc {
+    position: absolute; left: 16px; bottom: 10px; font-size: 17px;
+    background: rgba(0,0,0,.55); padding: 6px 14px; border-radius: 14px;
+  }
+
+  .hint {
+    text-align: center; font-size: 21px; color: var(--ink); margin: 6px 0 14px;
+    background: rgba(240,162,74,.10); border: 2px dashed rgba(240,162,74,.45);
+    border-radius: 18px; padding: 10px 16px;
+  }
+  .hint b { color: var(--amber); }
+
+  /* ---------- room cards ---------- */
+  .rooms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
+  .room-card {
+    background: var(--card); border: 2px solid var(--line); border-radius: 26px;
+    padding: 16px 14px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.30);
+  }
+  .room-top { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .room-top h3 { margin: 0; font-size: 23px; }
+  .state-pill {
+    font-size: 15px; font-weight: 800; letter-spacing: .6px; padding: 6px 12px; border-radius: 999px;
+    background: #241a10; border: 2px solid var(--line); color: var(--ink-dim); white-space: nowrap;
+  }
+  .state-pill.open { color: #c9f2d4; border-color: var(--green); }
+  .state-pill.moving { color: #ffe3b3; border-color: var(--amber); animation: pillblink 1.1s infinite; }
+  @keyframes pillblink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+  .bar {
+    position: relative; width: 58px; height: 148px; border-radius: 18px;
+    background: var(--bg0); border: 2px solid var(--line); overflow: hidden; cursor: pointer;
+  }
+  .fill {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep)); transition: height .25s;
+  }
+  .tline { position: absolute; left: 0; right: 0; height: 4px; background: #fff; border-radius: 2px; opacity: 0; transition: opacity .3s; }
+  .tline.visible { opacity: .9; }
+
+  .btnrow { display: flex; gap: 10px; width: 100%; }
+  .act {
+    flex: 1; min-height: 68px; border-radius: 18px; cursor: pointer;
+    font-size: 21px; font-weight: 800; color: var(--ink); padding: 0 6px;
+    border: 3px solid; background: var(--card2);
+  }
+  .act.open { border-color: var(--green); }
+  .act.open:active { background: var(--green-deep); }
+  .act.close { border-color: var(--amber-deep); }
+  .act.close:active { background: #6b3a20; }
+  .act.stop { border-color: #8a6a4a; }
+  .room-card.moving .act.stop { border-color: var(--amber); animation: stopulse 1s infinite; }
+  @keyframes stopulse { 0%,100% { transform: scale(1); background: var(--card2); } 50% { transform: scale(1.05); background: #5a3d1c; } }
+  .room-card.offline { opacity: .45; }
+
+  /* ---------- awning (full width) ---------- */
+  .awning-card {
+    background: var(--card); border: 2px solid var(--line); border-radius: 26px;
+    padding: 16px 20px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.30);
+  }
+  .awning-inner { display: flex; align-items: center; gap: 18px; }
+  .awning-inner .room-top { width: auto; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 190px; }
+  .bar.h { width: auto; height: 58px; flex: 1; }
+  .bar.h .fill { top: 0; bottom: 0; left: 0; right: auto; width: 0%; height: auto;
+    background: linear-gradient(90deg, var(--amber), var(--amber-deep)); transition: width .25s; }
+  .bar.h .tline { top: 0; bottom: 0; left: auto; right: auto; width: 4px; height: auto; }
+  .awning-inner .btnrow { width: auto; }
+  .awning-inner .act { min-width: 110px; }
+  #awning-status { font-size: 16px; color: var(--ink-dim); }
+  #sun-intel { font-size: 15px; color: var(--ink-dim); }
+
+  /* ---------- tv + magic hands ---------- */
+  .bottom-row { display: flex; gap: 14px; align-items: stretch; }
+  .tv-card {
+    flex: 1.4; background: var(--card); border: 2px solid var(--line); border-radius: 26px;
+    padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+  }
+  .tv-card h3 { margin: 0; font-size: 25px; }
+  #tv-status-text { font-size: 18px; color: var(--ink-dim); flex: 1; }
+  .tvbtn {
+    min-width: 72px; min-height: 68px; border-radius: 18px; cursor: pointer;
+    border: 3px solid var(--amber); background: var(--card2); color: var(--ink);
+    font-size: 20px; font-weight: 800; padding: 0 18px;
+  }
+  #tv-power-btn.online { background: var(--green-deep); border-color: var(--green); }
+  #tv-mute-btn.muted { background: #7a1f1f; border-color: var(--red); }
+  .magic-link {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: linear-gradient(150deg, #4a2a86, #2c1a52); border: 3px solid #7a5fc9;
+    border-radius: 26px; color: #f2ecff; text-decoration: none;
+    font-size: 24px; font-weight: 800; padding: 14px 20px; text-align: center;
+  }
+
+  /* ---------- modal ---------- */
+  #modal { position: fixed; inset: 0; background: rgba(10,6,3,.72); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 24px; }
+  #modal.hidden { display: none; }
+  .modal-card {
+    background: var(--card); border: 3px solid var(--amber); border-radius: 30px;
+    padding: 36px 40px; max-width: 560px; text-align: center;
+    box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  }
+  .modal-card h2 { margin: 0 0 12px; font-size: 34px; }
+  .modal-card p { font-size: 22px; line-height: 1.5; color: var(--ink); margin: 0 0 26px; }
+  .modal-btns { display: flex; gap: 14px; justify-content: center; }
+  .modal-btns button {
+    min-height: 72px; padding: 0 30px; font-size: 22px; font-weight: 800; cursor: pointer;
+    border-radius: 20px; border: 3px solid var(--line); background: var(--card2); color: var(--ink);
+  }
+  #modal-yes { border-color: var(--amber); background: #5a3d1c; }
+  #modal-yes:active { background: #8a5a17; }
+
+  @media (max-width: 900px) {
+    .rooms { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 34px; }
+    .mode-toggle { margin-left: 0; }
+    .bottom-row { flex-direction: column; }
+    .awning-inner { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div id="mode-banner" class="pretend">🧪 <b>PRETEND</b> — nothing moves, tap freely and explore</div>
+
+<header>
+  <h1>🏠 Casita <small>the house that listens</small></h1>
+  <div class="mode-toggle" role="group" aria-label="Pretend or real mode">
+    <button id="btn-pretend" onclick="setModePretend()">🧪 Pretend</button>
+    <button id="btn-real" onclick="askModeReal()">🏠 Real</button>
+  </div>
+  <div class="wx"><span id="temp">--</span><br><span id="weather-desc">...</span></div>
+  <div class="clock" id="widget-clock">--:--</div>
+</header>
+
+<div><span class="badge">TEST BUILD &middot; __KIOSK_BUILD__</span></div>
+
+<div class="photo-banner">
+  <div id="slide-1" class="slide-container active"><div id="blur-1" class="blur-bg"></div><div id="sharp-1" class="sharp-img"></div></div>
+  <div id="slide-2" class="slide-container"><div id="blur-2" class="blur-bg"></div><div id="sharp-2" class="sharp-img"></div></div>
+  <div id="photo-desc">...</div>
+</div>
+
+<p class="hint">👆 <b>Tap once</b> — it travels all the way by itself. <b>Tap Stop</b> anytime to stop it.</p>
+
+<div class="rooms">
+  <section class="room-column room-card" data-room="kid" id="card-kid">
+    <div class="room-top"><h3>Kid's Room</h3><span class="state-pill" id="state-kid">…</span></div>
+    <div class="bar" onclick="App.seek(event,'kid')" role="slider" aria-label="Kid's Room shutter position — tap to set">
+      <div id="prog-kid" class="fill"></div><div id="target-kid" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <button class="act open" onclick="App.cover('kid','Open')">Open</button>
+      <button class="act stop" onclick="App.cover('kid','Stop')">Stop</button>
+      <button class="act close" onclick="App.cover('kid','Close')">Close</button>
+    </div>
+  </section>
+
+  <section class="room-column room-card" data-room="master" id="card-master">
+    <div class="room-top"><h3>Master Bedroom</h3><span class="state-pill" id="state-master">…</span></div>
+    <div class="bar" onclick="App.seek(event,'master')" role="slider" aria-label="Master Bedroom shutter position — tap to set">
+      <div id="prog-master" class="fill"></div><div id="target-master" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <button class="act open" onclick="App.cover('master','Open')">Open</button>
+      <button class="act stop" onclick="App.cover('master','Stop')">Stop</button>
+      <button class="act close" onclick="App.cover('master','Close')">Close</button>
+    </div>
+  </section>
+
+  <section class="room-column room-card" data-room="tv_area" id="card-tv_area">
+    <div class="room-top"><h3>TV Area</h3><span class="state-pill" id="state-tv_area">…</span></div>
+    <div class="bar" onclick="App.seek(event,'tv_area')" role="slider" aria-label="TV Area shutter position — tap to set">
+      <div id="prog-tv_area" class="fill"></div><div id="target-tv_area" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <button class="act open" onclick="App.cover('tv_area','Open')">Open</button>
+      <button class="act stop" onclick="App.cover('tv_area','Stop')">Stop</button>
+      <button class="act close" onclick="App.cover('tv_area','Close')">Close</button>
+    </div>
+  </section>
+
+  <section class="room-column room-card" data-room="sofa" id="card-sofa">
+    <div class="room-top"><h3>Sofa</h3><span class="state-pill" id="state-sofa">…</span></div>
+    <div class="bar" onclick="App.seek(event,'sofa')" role="slider" aria-label="Sofa shutter position — tap to set">
+      <div id="prog-sofa" class="fill"></div><div id="target-sofa" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <button class="act open" onclick="App.cover('sofa','Open')">Open</button>
+      <button class="act stop" onclick="App.cover('sofa','Stop')">Stop</button>
+      <button class="act close" onclick="App.cover('sofa','Close')">Close</button>
+    </div>
+  </section>
+</div>
+
+<section class="room-column awning-card" data-room="awning" id="card-awning">
+  <div class="awning-inner">
+    <div class="room-top"><h3>Patio Awning</h3><span class="state-pill" id="state-awning">…</span></div>
+    <div class="bar h" onclick="App.seek(event,'awning',true)" role="slider" aria-label="Patio awning position — tap to set">
+      <div id="prog-awning" class="fill"></div><div id="target-awning" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <button class="act open" onclick="App.cover('awning','Open')">Out</button>
+      <button class="act stop" onclick="App.cover('awning','Stop')">Stop</button>
+      <button class="act close" onclick="App.cover('awning','Close')">In</button>
+    </div>
+  </div>
+  <div style="margin-top:10px"><b id="awning-status">...</b> <span id="sun-intel"></span></div>
+</section>
+
+<div class="bottom-row">
+  <div class="tv-card">
+    <h3>📺 TV</h3>
+    <span id="tv-status-text">...</span>
+    <button id="tv-mute-btn" class="tvbtn" onclick="App.tv('audio','setAudioMute',{})">Mute</button>
+    <button id="tv-power-btn" class="tvbtn" onclick="App.tv('system','setPowerStatus',{status:!this.classList.contains('online')})">Power</button>
+  </div>
+  <a class="magic-link" href="gesture.html?sim">✋ Magic Hands<br><small style="font-size:17px;font-weight:400">wave to change the photo</small></a>
+</div>
+
+<!-- Required by App.init (hidden) -->
+<div style="display:none" aria-hidden="true">
+  <div id="control-drawer"></div><div id="debug-log"></div>
+  <div id="super-widget"></div>
+</div>
+
+<!-- mode confirmation modal -->
+<div id="modal" class="hidden" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <h2 id="modal-title"></h2>
+    <p id="modal-text"></p>
+    <div class="modal-btns">
+      <button id="modal-yes"></button>
+      <button id="modal-no"></button>
+    </div>
+  </div>
+</div>
+
+<script src="photos_data.js"></script>
+<script src="app_v89.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var forcedSim = window.__PREVIEW_FORCED_SIM === true;
+  var isSim = forcedSim || new URLSearchParams(location.search).has("sim");
+
+  var banner = document.getElementById("mode-banner");
+  var btnPretend = document.getElementById("btn-pretend");
+  var btnReal = document.getElementById("btn-real");
+  var modal = document.getElementById("modal");
+  var modalTitle = document.getElementById("modal-title");
+  var modalText = document.getElementById("modal-text");
+  var modalYes = document.getElementById("modal-yes");
+  var modalNo = document.getElementById("modal-no");
+
+  function paintMode() {
+    banner.className = isSim ? "pretend" : "real";
+    banner.innerHTML = isSim
+      ? "🧪 <b>PRETEND</b> — nothing moves, tap freely and explore"
+      : "🏠 <b>REAL</b> — shutters and the awning really move";
+    btnPretend.className = isSim ? "active-pretend" : "";
+    btnReal.className = isSim ? "" : "active-real";
+  }
+
+  function showModal(title, text, yesLabel, noLabel, onYes) {
+    modalTitle.textContent = title;
+    modalText.textContent = text;
+    modalYes.textContent = yesLabel;
+    modalYes.onclick = function () { hideModal(); onYes(); };
+    if (noLabel) {
+      modalNo.style.display = "";
+      modalNo.textContent = noLabel;
+      modalNo.onclick = hideModal;
+    } else {
+      modalNo.style.display = "none";
+    }
+    modal.classList.remove("hidden");
+  }
+  function hideModal() { modal.classList.add("hidden"); }
+
+  window.setModePretend = function () {
+    if (isSim) return;
+    location.search = "?sim";
+  };
+
+  window.askModeReal = function () {
+    if (!isSim) return;
+    if (forcedSim) {
+      showModal(
+        "Pretend-only preview",
+        "Real mode only works on the home kiosk — this preview is pretend-only.",
+        "Got it", null, function () {}
+      );
+      return;
+    }
+    showModal(
+      "Switch to REAL mode?",
+      "This will move real shutters and the awning. Continue?",
+      "Yes, make it real", "Stay pretending",
+      function () { location.href = location.pathname; }
+    );
+  };
+
+  /* ---- live state pills + pulsing Stop ---- */
+  var ROOMS = ["kid", "master", "tv_area", "sofa", "awning"];
+  function roomState(id) {
+    try {
+      if (typeof State !== "undefined") {
+        if (State.movingRooms && State.movingRooms[id]) return "moving";
+        var p = (State.positions && State.positions[id]) || 0;
+        if (p >= 95) return "open";
+        if (p <= 5) return "closed";
+        return "mid";
+      }
+    } catch (e) { /* brain not ready yet */ }
+    return "unknown";
+  }
+  var LABELS = { open: "OPEN", closed: "CLOSED", mid: "A BIT OPEN", moving: "MOVING…", unknown: "…" };
+  function paintStates() {
+    ROOMS.forEach(function (id) {
+      var pill = document.getElementById("state-" + id);
+      var card = document.getElementById("card-" + id);
+      if (!pill || !card) return;
+      var st = roomState(id);
+      pill.textContent = LABELS[st];
+      pill.className = "state-pill" + (st === "open" ? " open" : st === "moving" ? " moving" : "");
+      card.classList.toggle("moving", st === "moving");
+    });
+  }
+  setInterval(paintStates, 800);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { setTimeout(paintStates, 600); });
+  } else {
+    setTimeout(paintStates, 600);
+  }
+
+  paintMode();
+})();
+</script>
+<script>window.__KIOSK_BUILD="__KIOSK_BUILD__";</script>
+<script src="updater.js"></script>
+</body>
+</html>

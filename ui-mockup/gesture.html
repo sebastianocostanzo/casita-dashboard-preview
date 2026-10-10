@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita — Magic Hands</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1000px 700px at 50% -10%, #3b2a5e 0%, #1c1530 55%, #120e1f 100%);
+    color: #f2ecff; padding: 16px 20px 24px; display: flex; flex-direction: column;
+  }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .back {
+    display: flex; align-items: center; justify-content: center; min-width: 64px; min-height: 64px;
+    border-radius: 18px; background: #2c2350; color: #f2ecff; text-decoration: none; font-size: 30px;
+    border: 2px solid #4a3d80;
+  }
+  h1 { font-size: 36px; margin: 0; flex: 1; }
+  h1 small { display: block; font-size: 17px; font-weight: 400; opacity: .8; }
+  .clock { font-size: 30px; font-weight: 700; }
+
+  .howto {
+    font-size: 21px; line-height: 1.55; background: #2c2350; border: 2px solid #4a3d80;
+    border-radius: 20px; padding: 14px 20px; margin-bottom: 14px;
+  }
+  .howto b { color: #c9b3ff; }
+
+  .stage { position: relative; flex: 1; min-height: 300px; border-radius: 24px; overflow: hidden;
+    border: 2px solid #4a3d80; background: #171226; }
+  .slide-container { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
+  .slide-container.active { opacity: 1; }
+  .blur-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(24px) brightness(.55); }
+  .sharp-img { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; }
+  #photo-desc { position: absolute; left: 16px; bottom: 12px; font-size: 18px; background: rgba(0,0,0,.55); padding: 6px 14px; border-radius: 14px; }
+
+  #cam {
+    position: absolute; right: 12px; top: 12px; width: 168px; height: 126px; border-radius: 16px;
+    border: 2px solid #4a3d80; transform: scaleX(-1); background: #000; object-fit: cover;
+  }
+  #status {
+    position: absolute; left: 16px; top: 12px; max-width: 60%;
+    font-size: 19px; background: rgba(0,0,0,.6); padding: 10px 16px; border-radius: 14px; line-height: 1.4;
+  }
+  #holdbar-wrap {
+    position: absolute; left: 16px; right: 200px; bottom: 52px; height: 14px; border-radius: 8px;
+    background: rgba(255,255,255,.15); overflow: hidden; opacity: 0; transition: opacity .3s;
+  }
+  #holdbar { height: 100%; width: 0%; background: #a78bfa; border-radius: 8px; }
+
+  #cheer {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(20,10,40,.55); z-index: 60; pointer-events: none;
+  }
+  #cheer.show { display: flex; }
+  #cheer div {
+    font-size: 64px; font-weight: 800; text-align: center; line-height: 1.3;
+    background: #4a2a86; border: 3px solid #a78bfa; border-radius: 32px; padding: 36px 56px;
+    animation: pop .45s ease-out;
+  }
+  @keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="index.html?sim" aria-label="Back to designs">&#8249;</a>
+  <h1>Magic Hands <small>wave at the tablet, change the photo</small></h1>
+  <div class="clock" id="widget-clock">--:--</div>
+</header>
+
+<div class="howto">
+  <b>How to play:</b> look into the little camera window, show the tablet your
+  <b>open hand</b> (all fingers up, like a high-five!), and <b>hold it still</b>.
+  Watch the purple bar fill up &mdash; then the photo changes!
+</div>
+
+<div class="stage">
+  <div id="slide-1" class="slide-container active"><div id="blur-1" class="blur-bg"></div><div id="sharp-1" class="sharp-img"></div></div>
+  <div id="slide-2" class="slide-container"><div id="blur-2" class="blur-bg"></div><div id="sharp-2" class="sharp-img"></div></div>
+  <div id="photo-desc">...</div>
+  <video id="cam" playsinline muted></video>
+  <div id="status">Starting the camera...</div>
+  <div id="holdbar-wrap"><div id="holdbar"></div></div>
+</div>
+
+<div id="cheer"><div>&#9995;<br>Hi! Next photo!</div></div>
+
+<!-- Required by App.init (hidden) -->
+<div style="display:none" aria-hidden="true">
+  <div id="awning-status"></div><div id="control-drawer"></div><div id="debug-log"></div>
+  <div id="sun-intel"></div><div id="super-widget"></div>
+  <div id="temp"></div><button id="tv-mute-btn"></button><button id="tv-power-btn"></button>
+  <div id="tv-status-text"></div><div id="weather-desc"></div>
+  <div id="prog-kid"></div><div id="prog-master"></div><div id="prog-tv_area"></div>
+  <div id="prog-sofa"></div><div id="prog-awning"></div>
+  <div id="target-kid"></div><div id="target-master"></div><div id="target-tv_area"></div>
+  <div id="target-sofa"></div><div id="target-awning"></div>
+</div>
+
+<script src="photos_data.js"></script>
+<script src="app_v89.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var HOLD_MS = 900;      // how long the palm must be held still
+  var COOLDOWN_MS = 3000; // pause between triggers
+
+  function setStatus(html) {
+    var el = document.getElementById("status");
+    if (el) el.innerHTML = html;
+  }
+  function setHold(pct) {
+    var wrap = document.getElementById("holdbar-wrap");
+    var bar = document.getElementById("holdbar");
+    if (!wrap || !bar) return;
+    wrap.style.opacity = pct > 0 ? "1" : "0";
+    bar.style.width = Math.min(100, Math.max(0, pct)) + "%";
+  }
+  function cheer() {
+    var c = document.getElementById("cheer");
+    if (!c) return;
+    c.classList.add("show");
+    setTimeout(function () { c.classList.remove("show"); }, 1600);
+    try {
+      if (typeof App !== "undefined" && App.nextSlide) App.nextSlide();
+    } catch (e) { /* photos keep working regardless */ }
+  }
+
+  // Open palm = 4 fingers extended + thumb out (image coords: y grows downward)
+  function isOpenPalm(lm) {
+    try {
+      var fingers = [[8, 6], [12, 10], [16, 14], [20, 18]];
+      for (var i = 0; i < fingers.length; i++) {
+        if (lm[fingers[i][0]].y > lm[fingers[i][1]].y) return false;
+      }
+      var d = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); };
+      if (d(lm[4], lm[0]) < d(lm[3], lm[0]) * 1.15) return false;
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async function boot() {
+    var video = document.getElementById("cam");
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("This tablet cannot open its camera, so the magic hands are resting. The photos still work!");
+      return;
+    }
+    if (typeof Hands === "undefined") {
+      setStatus("The hand magic needs internet to load. Check Wi-Fi, then come back and play!");
+      return;
+    }
+
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240, facingMode: "user" }, audio: false
+      });
+      video.srcObject = stream;
+      try { await video.play(); } catch (e) { /* some browsers need a tap first */ }
+    } catch (e) {
+      setStatus("The camera said no. Tap <b>Allow</b> when the tablet asks, then reload this page to play!");
+      return;
+    }
+
+    var hands;
+    try {
+      hands = new Hands({ locateFile: function (f) { return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + f; } });
+      hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+    } catch (e) {
+      setStatus("The hand magic could not start. The photos still work!");
+      return;
+    }
+
+    var palmSince = 0;
+    var cooldownUntil = 0;
+    var busy = false;
+
+    hands.onResults(function (res) {
+      var now = Date.now();
+      var list = res && res.multiHandLandmarks;
+      var lm = list && list[0];
+      if (lm && isOpenPalm(lm)) {
+        if (!palmSince) palmSince = now;
+        var held = now - palmSince;
+        setHold((held / HOLD_MS) * 100);
+        setStatus("Hold it... hold it...");
+        if (held >= HOLD_MS && now > cooldownUntil) {
+          cooldownUntil = now + COOLDOWN_MS;
+          palmSince = 0;
+          setHold(0);
+          setStatus("Show your open hand to change the photo!");
+          cheer();
+        }
+      } else {
+        palmSince = 0;
+        setHold(0);
+        if (now > cooldownUntil) setStatus("Show your open hand to change the photo!");
+      }
+    });
+
+    setStatus("Show your open hand to change the photo!");
+
+    async function loop() {
+      try {
+        if (!busy && video.readyState >= 2) {
+          busy = true;
+          hands.send({ image: video }).catch(function () {}).finally(function () { busy = false; });
+        }
+      } catch (e) { busy = false; }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { boot().catch(function () {}); });
+  } else {
+    boot().catch(function () {});
+  }
+})();
+</script>
+<script>window.__KIOSK_BUILD="__KIOSK_BUILD__";</script>
+<script src="updater.js"></script>
+</body>
+</html>
