@@ -594,6 +594,11 @@
   var dot = document.getElementById("hand-dot");
   var flash = document.getElementById("palm-flash");
 
+  function overlayOpen() {
+    var o = document.getElementById("overlay");
+    return !!(o && o.classList.contains("open"));
+  }
+
   var handStatus = null;
   function setHandStatus(t) {
     if (!handStatus) handStatus = document.getElementById("hand-status");
@@ -643,19 +648,21 @@
     setHandStatus("hand seen");
 
     // --- curtain swipe (user's perspective) ---
-    var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
-    if (swipeX === null) { swipeX = x; swipeT = now; }
-    else {
-      var dx = x - swipeX, dt = now - swipeT;
-      if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; }
-      else if (dt >= SWIPE_MIN_MS && now >= lockUntil) {
-        if (dx >= SWIPE_DIST && !isOverlayOpen()) {
-          window.toggleOverlay(true); lockUntil = now + 1600; resetSwipe();
-        } else if (dx <= -SWIPE_DIST && isOverlayOpen()) {
-          window.toggleOverlay(false); lockUntil = now + 1600; resetSwipe();
+    try {
+      var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
+      if (swipeX === null) { swipeX = x; swipeT = now; }
+      else {
+        var dx = x - swipeX, dt = now - swipeT;
+        if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; }
+        else if (dt >= SWIPE_MIN_MS && now >= lockUntil) {
+          if (dx >= SWIPE_DIST && !overlayOpen()) {
+            window.toggleOverlay(true); lockUntil = now + 1600; resetSwipe();
+          } else if (dx <= -SWIPE_DIST && overlayOpen()) {
+            window.toggleOverlay(false); lockUntil = now + 1600; resetSwipe();
+          }
         }
       }
-    }
+    } catch (e) { resetSwipe(); }
 
     // --- palm hold: next photo ---
     if (isOpenPalm(lm)) {
