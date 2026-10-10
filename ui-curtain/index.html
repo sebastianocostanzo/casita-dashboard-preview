@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg0: #140d08; --ink: #f7ead9; --ink-dim: #cbb99f;
+    --amber: #f0a24a; --amber-deep: #d96c4f;
+    --green: #4caf50; --green-deep: #2e6b34;
+    --line: #4a3520;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #000; color: var(--ink);
+    user-select: none; -webkit-user-select: none;
+  }
+  #stage { position: fixed; inset: 0; overflow: hidden; }
+
+  /* ---------- photo frame (full bleed) ---------- */
+  #photoframe { position: absolute; inset: 0; }
+  .slide-container { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
+  .slide-container.active { opacity: 1; }
+  .blur-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(24px) brightness(.6); }
+  .sharp-img { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  #photo-desc {
+    position: absolute; left: 148px; bottom: 18px; font-size: 17px; z-index: 6;
+    background: rgba(0,0,0,.55); padding: 6px 14px; border-radius: 14px;
+  }
+
+  /* ---------- curtains framing the photo ---------- */
+  .curtain {
+    position: absolute; top: 0; bottom: 0; width: 124px; z-index: 5;
+    background-image: url('curtain.jpg'); background-size: cover;
+    transition: transform .9s ease;
+    box-shadow: inset -8px 0 18px rgba(0,0,0,.35);
+  }
+  #curtain-left { left: 0; background-position: left center; }
+  #curtain-right { right: 0; background-position: right center; box-shadow: inset 8px 0 18px rgba(0,0,0,.35); }
+  #curtain-left.drawn { transform: translateX(-118%); }
+  #curtain-right.drawn { transform: translateX(118%); }
+
+  /* ---------- slim top bar ---------- */
+  #topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 58px; z-index: 20;
+    display: flex; align-items: center; gap: 14px; padding: 0 140px 0 140px;
+    background: linear-gradient(180deg, rgba(8,5,2,.60), transparent);
+  }
+  .tclock { display: flex; align-items: baseline; gap: 10px; min-width: 200px; }
+  #widget-clock { font-size: 26px; font-weight: 800; }
+  .twx { font-size: 15px; color: var(--ink-dim); }
+  .twx #temp { font-size: 19px; font-weight: 700; color: var(--ink); }
+  #mode-banner {
+    flex: 1; text-align: center; font-size: 15px; font-weight: 800; letter-spacing: .4px;
+    padding: 6px 18px; border-radius: 999px; white-space: nowrap;
+  }
+  #mode-banner.pretend { background: rgba(30,77,43,.88); color: #c9f2d4; border: 2px solid var(--green); }
+  #mode-banner.real { background: rgba(90,58,16,.92); color: #ffe3b3; border: 2px solid var(--amber); }
+  #hand-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex: none;
+    background: #3a2c1c; border: 2px solid var(--line); transition: all .3s;
+  }
+  #hand-dot.seen { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 12px var(--amber); }
+  .mode-toggle { display: flex; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; flex: none; }
+  .mode-toggle button {
+    min-height: 44px; padding: 0 16px; font-size: 15px; font-weight: 800; cursor: pointer;
+    border: none; background: rgba(36,26,16,.88); color: var(--ink-dim);
+  }
+  .mode-toggle button.active-pretend { background: var(--green-deep); color: #fff; }
+  .mode-toggle button.active-real { background: #8a5a17; color: #fff; }
+  .badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .8px; white-space: nowrap; flex: none;
+    background: rgba(36,26,16,.88); border: 2px solid var(--line); color: var(--ink-dim);
+    border-radius: 999px; padding: 5px 12px;
+  }
+
+  /* ---------- control overlay (right sheet) ---------- */
+  #overlay {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 452px; z-index: 30;
+    transform: translateX(106%); transition: transform .9s ease;
+    background: linear-gradient(160deg, rgba(40,26,14,.97), rgba(22,14,8,.97));
+    border-left: 2px solid var(--line); border-radius: 28px 0 0 28px;
+    box-shadow: -18px 0 48px rgba(0,0,0,.55);
+    display: flex; flex-direction: column; padding: 12px 14px; gap: 10px;
+  }
+  #overlay.open { transform: none; }
+  .ov-head { display: flex; align-items: center; gap: 10px; }
+  .ov-head h2 { margin: 0; font-size: 24px; flex: 1; }
+  .ov-head .ov-hint { font-size: 13px; color: var(--ink-dim); }
+  #overlay-close {
+    width: 56px; height: 56px; border-radius: 18px; cursor: pointer; flex: none;
+    font-size: 22px; font-weight: 800; color: var(--ink);
+    background: rgba(255,255,255,.06); border: 2px solid var(--line);
+  }
+  #overlay-close:active { background: rgba(255,255,255,.14); }
+
+  .sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .scard {
+    background: rgba(255,255,255,.045); border: 2px solid var(--line); border-radius: 20px;
+    padding: 10px;
+  }
+  .scard .room-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+  .scard h3 { margin: 0; font-size: 16px; }
+  .state-pill {
+    font-size: 11px; font-weight: 800; letter-spacing: .5px; padding: 4px 9px; border-radius: 999px;
+    background: rgba(0,0,0,.4); border: 2px solid var(--line); color: var(--ink-dim); white-space: nowrap;
+  }
+  .state-pill.open { color: #c9f2d4; border-color: var(--green); }
+  .state-pill.moving { color: #ffe3b3; border-color: var(--amber); animation: pillblink 1.1s infinite; }
+  @keyframes pillblink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+  .ctlrow { display: flex; gap: 8px; align-items: stretch; }
+  /* Tall bronze buttons (NOT white): tap = go, tap again = stop, other = turn around */
+  .tbtn {
+    width: 62px; height: 108px; border-radius: 16px; cursor: pointer; flex: none;
+    border: 2px solid #6b4423; color: var(--ink);
+    background: linear-gradient(180deg, #7a4f22, #4a2c12);
+    box-shadow: 0 3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .tbtn svg { width: 30px; height: 30px; }
+  .tbtn:active { background: linear-gradient(180deg, #5a3a17, #3a2210); }
+  .tbtn.moving { border-color: var(--amber); animation: tpulse 1.1s infinite; }
+  @keyframes tpulse {
+    0%,100% { box-shadow: 0 3px 10px rgba(0,0,0,.4); }
+    50% { box-shadow: 0 0 0 5px rgba(240,162,74,.5), 0 3px 10px rgba(0,0,0,.4); }
+  }
+  .slimbar {
+    flex: 1; position: relative; border-radius: 12px; cursor: pointer; min-width: 28px;
+    background: rgba(0,0,0,.45); border: 2px solid var(--line); overflow: hidden;
+  }
+  .sfill {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep)); transition: height .25s;
+  }
+  .stline { position: absolute; left: 0; right: 0; height: 4px; background: #fff; border-radius: 2px; opacity: 0; transition: opacity .3s; }
+  .stline.visible { opacity: .9; }
+  .scard.offline { opacity: .45; }
+
+  .orow { display: flex; gap: 10px; flex: 1; min-height: 0; }
+  /* Awning remote: white body like the BleBox remote, 3 vertical buttons */
+  .remote {
+    width: 148px; flex: none; border-radius: 26px; padding: 10px 10px 8px;
+    background: linear-gradient(180deg, #ffffff, #e2e2e2);
+    box-shadow: 0 6px 20px rgba(0,0,0,.45);
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  }
+  .remote h4 { margin: 0; font-size: 14px; color: #666; text-align: center; }
+  .rbtn {
+    min-height: 58px; border-radius: 14px; cursor: pointer;
+    border: 2px solid #c2c2c2; background: linear-gradient(180deg, #f6f6f6, #d9d9d9);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 14px; font-weight: 800; color: #5a5a5a; padding: 0 6px;
+  }
+  .rbtn svg { width: 22px; height: 22px; flex: none; }
+  .rbtn:active { background: #c9c9c9; }
+  .rbtn.moving { border-color: var(--amber); animation: wpulse 1.1s infinite; }
+  @keyframes wpulse {
+    0%,100% { box-shadow: none; }
+    50% { box-shadow: 0 0 0 4px rgba(240,162,74,.55); }
+  }
+  #awning-status { font-size: 12px; color: #777; text-align: center; min-height: 16px; }
+  #sun-intel { font-size: 11px; color: #888; text-align: center; }
+  .remote.offline { opacity: .45; }
+
+  .tvmini {
+    flex: 1; background: rgba(255,255,255,.045); border: 2px solid var(--line);
+    border-radius: 20px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .tvmini h4 { margin: 0; font-size: 16px; }
+  #tv-status-text { font-size: 14px; color: var(--ink-dim); min-height: 20px; }
+  .tvmini .tvrow { display: flex; gap: 8px; }
+  .tvbtn {
+    flex: 1; min-height: 58px; border-radius: 14px; cursor: pointer;
+    border: 2px solid var(--amber); background: rgba(255,255,255,.05); color: var(--ink);
+    font-size: 15px; font-weight: 800;
+  }
+  .tvbtn:active { background: rgba(240,162,74,.25); }
+  #tv-power-btn.online { background: var(--green-deep); border-color: var(--green); }
+  #tv-mute-btn.muted { background: #7a1f1f; border-color: #e05252; }
+
+  /* ---------- fallback pill (gesture unavailable) ---------- */
+  #fallback-pill {
+    position: absolute; right: 148px; bottom: 22px; z-index: 25; display: none;
+    background: rgba(20,12,6,.88); border: 2px solid var(--amber); color: var(--ink);
+    border-radius: 999px; padding: 14px 26px; font-size: 18px; font-weight: 700; cursor: pointer;
+  }
+  #fallback-pill.show { display: block; }
+
+  /* ---------- palm flash ---------- */
+  #palm-flash {
+    position: absolute; left: 50%; bottom: 110px; z-index: 25; pointer-events: none;
+    font-size: 56px; opacity: 0; transform: translateX(-50%) scale(.6); transition: all .3s;
+  }
+  #palm-flash.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  /* ---------- PIN pad ---------- */
+  #pin-modal { position: fixed; inset: 0; background: rgba(10,6,3,.72); z-index: 110;
+    display: flex; align-items: center; justify-content: center; padding: 24px; }
+  #pin-modal.hidden { display: none; }
+  .pin-card {
+    background: #2e2013; border: 3px solid var(--amber); border-radius: 30px;
+    padding: 28px 32px; width: 400px; text-align: center; box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  }
+  .pin-card h2 { margin: 0 0 8px; font-size: 30px; color: var(--ink); }
+  .pin-card p { font-size: 19px; line-height: 1.45; color: var(--ink); margin: 0 0 16px; min-height: 56px; }
+  .pin-dots { display: flex; gap: 16px; justify-content: center; margin-bottom: 18px; }
+  .pin-dot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line); background: #241a10; }
+  .pin-dot.filled { background: var(--amber); border-color: var(--amber); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pin-key {
+    min-height: 72px; border-radius: 18px; cursor: pointer;
+    font-size: 28px; font-weight: 800; color: var(--ink);
+    border: 3px solid var(--line); background: #3d2a17;
+  }
+  .pin-key:active { background: #5a3d1c; }
+  .pin-key.util { font-size: 20px; }
+  @keyframes pinshake {
+    0%,100% { transform: translateX(0); } 20% { transform: translateX(-12px); }
+    40% { transform: translateX(12px); } 60% { transform: translateX(-8px); } 80% { transform: translateX(8px); }
+  }
+  .pin-card.shake { animation: pinshake .45s; }
+
+  /* ---------- modal ---------- */
+  #modal { position: fixed; inset: 0; background: rgba(10,6,3,.72); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 24px; }
+  #modal.hidden { display: none; }
+  .modal-card {
+    background: #2e2013; border: 3px solid var(--amber); border-radius: 30px;
+    padding: 36px 40px; max-width: 560px; text-align: center; box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  }
+  .modal-card h2 { margin: 0 0 12px; font-size: 34px; color: var(--ink); }
+  .modal-card p { font-size: 22px; line-height: 1.5; color: var(--ink); margin: 0 0 26px; }
+  .modal-btns { display: flex; gap: 14px; justify-content: center; }
+  .modal-btns button {
+    min-height: 72px; padding: 0 30px; font-size: 22px; font-weight: 800; cursor: pointer;
+    border-radius: 20px; border: 3px solid var(--line); background: #3d2a17; color: var(--ink);
+  }
+  #modal-yes { border-color: var(--amber); background: #5a3d1c; }
+  #modal-yes:active { background: #8a5a17; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <!-- photo frame: full bleed -->
+  <div id="photoframe">
+    <div id="slide-1" class="slide-container active"><div id="blur-1" class="blur-bg"></div><div id="sharp-1" class="sharp-img"></div></div>
+    <div id="slide-2" class="slide-container"><div id="blur-2" class="blur-bg"></div><div id="sharp-2" class="sharp-img"></div></div>
+    <div id="photo-desc">...</div>
+  </div>
+
+  <!-- curtains framing the photo -->
+  <div id="curtain-left" class="curtain"></div>
+  <div id="curtain-right" class="curtain"></div>
+
+  <!-- slim top bar -->
+  <div id="topbar">
+    <div class="tclock">
+      <span id="widget-clock">--:--</span>
+      <span class="twx"><span id="temp">--</span> <span id="weather-desc">...</span></span>
+    </div>
+    <div id="mode-banner" class="pretend">...</div>
+    <div id="hand-dot" title="hand camera"></div>
+    <div class="mode-toggle" role="group" aria-label="Pretend or real mode">
+      <button id="btn-pretend" onclick="setModePretend()">🧪 Pretend</button>
+      <button id="btn-real" onclick="askModeReal()">🏠 Real</button>
+    </div>
+    <span class="badge">TEST BUILD &middot; __KIOSK_BUILD__</span>
+  </div>
+
+  <div id="palm-flash">✋</div>
+  <button id="fallback-pill" onclick="toggleOverlay()">👆 tap for controls</button>
+
+  <!-- control overlay: right sheet -->
+  <aside id="overlay" aria-label="Controls">
+    <div class="ov-head">
+      <h2>Controls</h2>
+      <span class="ov-hint">tap ▲ to go · again to stop · ▼ to turn around</span>
+      <button id="overlay-close" onclick="toggleOverlay(false)" aria-label="Close controls">✕</button>
+    </div>
+
+    <div class="sgrid">
+      <section class="room-column scard" data-room="kid" id="card-kid">
+        <div class="room-top"><h3>Kid's Room</h3><span class="state-pill" id="state-kid">…</span></div>
+        <div class="ctlrow">
+          <button class="tbtn" id="tb-kid-up" onclick="pressDir('kid','Open')" aria-label="Open Kid's Room"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+          <div class="slimbar" onclick="App.seek(event,'kid')" role="slider" aria-label="Kid's Room position"><div id="prog-kid" class="sfill"></div><div id="target-kid" class="stline"></div></div>
+          <button class="tbtn" id="tb-kid-down" onclick="pressDir('kid','Close')" aria-label="Close Kid's Room"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
+        </div>
+      </section>
+      <section class="room-column scard" data-room="master" id="card-master">
+        <div class="room-top"><h3>Master Bedroom</h3><span class="state-pill" id="state-master">…</span></div>
+        <div class="ctlrow">
+          <button class="tbtn" id="tb-master-up" onclick="pressDir('master','Open')" aria-label="Open Master Bedroom"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+          <div class="slimbar" onclick="App.seek(event,'master')" role="slider" aria-label="Master Bedroom position"><div id="prog-master" class="sfill"></div><div id="target-master" class="stline"></div></div>
+          <button class="tbtn" id="tb-master-down" onclick="pressDir('master','Close')" aria-label="Close Master Bedroom"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
+        </div>
+      </section>
+      <section class="room-column scard" data-room="tv_area" id="card-tv_area">
+        <div class="room-top"><h3>TV Area</h3><span class="state-pill" id="state-tv_area">…</span></div>
+        <div class="ctlrow">
+          <button class="tbtn" id="tb-tv_area-up" onclick="pressDir('tv_area','Open')" aria-label="Open TV Area"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+          <div class="slimbar" onclick="App.seek(event,'tv_area')" role="slider" aria-label="TV Area position"><div id="prog-tv_area" class="sfill"></div><div id="target-tv_area" class="stline"></div></div>
+          <button class="tbtn" id="tb-tv_area-down" onclick="pressDir('tv_area','Close')" aria-label="Close TV Area"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
+        </div>
+      </section>
+      <section class="room-column scard" data-room="sofa" id="card-sofa">
+        <div class="room-top"><h3>Sofa</h3><span class="state-pill" id="state-sofa">…</span></div>
+        <div class="ctlrow">
+          <button class="tbtn" id="tb-sofa-up" onclick="pressDir('sofa','Open')" aria-label="Open Sofa"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg></button>
+          <div class="slimbar" onclick="App.seek(event,'sofa')" role="slider" aria-label="Sofa position"><div id="prog-sofa" class="sfill"></div><div id="target-sofa" class="stline"></div></div>
+          <button class="tbtn" id="tb-sofa-down" onclick="pressDir('sofa','Close')" aria-label="Close Sofa"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c987" stroke-width="2.4" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg></button>
+        </div>
+      </section>
+    </div>
+
+    <div class="orow">
+      <div class="room-column remote" data-room="awning" id="card-awning">
+        <h4>Patio Awning</h4>
+        <button class="rbtn" id="tb-awning-up" onclick="pressDir('awning','Open')" aria-label="Extend awning"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.4" stroke-linejoin="round"><path d="M12 4 L21 18 H3 Z"/></svg>Out</button>
+        <button class="rbtn" onclick="App.cover('awning','Stop')" aria-label="Stop awning"><svg viewBox="0 0 24 24" fill="#8a6a3a"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>Stop</button>
+        <button class="rbtn" id="tb-awning-down" onclick="pressDir('awning','Close')" aria-label="Retract awning"><svg viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2.4" stroke-linejoin="round"><path d="M12 20 L3 6 H21 Z"/></svg>In</button>
+        <div><b id="awning-status">...</b></div>
+        <div id="sun-intel"></div>
+        <span class="state-pill" id="state-awning">…</span>
+      </div>
+      <div class="tvmini">
+        <h4>📺 TV</h4>
+        <span id="tv-status-text">...</span>
+        <div class="tvrow">
+          <button id="tv-power-btn" class="tvbtn" onclick="App.tv('system','setPowerStatus',{status:!this.classList.contains('online')})">Power</button>
+          <button id="tv-mute-btn" class="tvbtn" onclick="App.tv('audio','setAudioMute',{})">Mute</button>
+        </div>
+      </div>
+    </div>
+    <!-- hidden stubs the brain expects -->
+    <div style="display:none" aria-hidden="true">
+      <div id="prog-awning"></div><div id="target-awning"></div>
+    </div>
+  </aside>
+
+  <!-- Required by App.init (hidden) -->
+  <div style="display:none" aria-hidden="true">
+    <div id="control-drawer"></div><div id="debug-log"></div><div id="super-widget"></div>
+  </div>
+
+  <!-- mode confirmation modal -->
+  <div id="modal" class="hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 id="modal-title"></h2>
+      <p id="modal-text"></p>
+      <div class="modal-btns">
+        <button id="modal-yes"></button>
+        <button id="modal-no"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN pad for real mode -->
+  <div id="pin-modal" class="hidden" role="dialog" aria-modal="true" aria-label="Enter code for real mode">
+    <div class="pin-card" id="pin-card">
+      <h2>🔐 Grown-ups only</h2>
+      <p id="pin-msg">Enter the 4-digit code to switch to REAL mode.</p>
+      <div class="pin-dots" id="pin-dots" aria-hidden="true">
+        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pinPress('1')">1</button>
+        <button class="pin-key" onclick="pinPress('2')">2</button>
+        <button class="pin-key" onclick="pinPress('3')">3</button>
+        <button class="pin-key" onclick="pinPress('4')">4</button>
+        <button class="pin-key" onclick="pinPress('5')">5</button>
+        <button class="pin-key" onclick="pinPress('6')">6</button>
+        <button class="pin-key" onclick="pinPress('7')">7</button>
+        <button class="pin-key" onclick="pinPress('8')">8</button>
+        <button class="pin-key" onclick="pinPress('9')">9</button>
+        <button class="pin-key util" onclick="pinClear()">Clear</button>
+        <button class="pin-key" onclick="pinPress('0')">0</button>
+        <button class="pin-key util" onclick="pinCancel()" aria-label="Cancel">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="photos_data.js"></script>
+<script src="app_v89.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var forcedSim = window.__PREVIEW_FORCED_SIM === true;
+  var isSim = forcedSim || new URLSearchParams(location.search).has("sim");
+  var practiceReal = false;
+  function isReal() { return practiceReal || !isSim; }
+
+  var banner = document.getElementById("mode-banner");
+  var btnPretend = document.getElementById("btn-pretend");
+  var btnReal = document.getElementById("btn-real");
+  var modal = document.getElementById("modal");
+  var modalTitle = document.getElementById("modal-title");
+  var modalText = document.getElementById("modal-text");
+  var modalYes = document.getElementById("modal-yes");
+  var modalNo = document.getElementById("modal-no");
+
+  function paintMode() {
+    var real = isReal();
+    banner.className = real ? "real" : "pretend";
+    banner.textContent = real
+      ? (practiceReal ? "🏠 REAL — practice" : "🏠 REAL — shutters really move")
+      : "🧪 PRETEND — nothing moves";
+    btnPretend.className = real ? "" : "active-pretend";
+    btnReal.className = real ? "active-real" : "";
+  }
+
+  function showModal(title, text, yesLabel, noLabel, onYes) {
+    modalTitle.textContent = title;
+    modalText.textContent = text;
+    modalYes.textContent = yesLabel;
+    modalYes.onclick = function () { hideModal(); onYes(); };
+    if (noLabel) {
+      modalNo.style.display = "";
+      modalNo.textContent = noLabel;
+      modalNo.onclick = hideModal;
+    } else {
+      modalNo.style.display = "none";
+    }
+    modal.classList.remove("hidden");
+  }
+  function hideModal() { modal.classList.add("hidden"); }
+
+  window.setModePretend = function () {
+    if (practiceReal) { practiceReal = false; paintMode(); return; }
+    if (isSim) return;
+    location.search = "?sim";
+  };
+
+  // Kid-guard, not real security: keeps little fingers out of REAL mode.
+  var REAL_MODE_PIN = "0872";
+
+  var pinModal = document.getElementById("pin-modal");
+  var pinCard = document.getElementById("pin-card");
+  var pinDots = document.getElementById("pin-dots");
+  var pinMsg = document.getElementById("pin-msg");
+  var pinEntry = "";
+
+  function paintPinDots() {
+    var dots = pinDots.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = "pin-dot" + (i < pinEntry.length ? " filled" : "");
+    }
+  }
+  function openPin() {
+    pinEntry = "";
+    paintPinDots();
+    pinMsg.textContent = "Enter the 4-digit code to switch to REAL mode.";
+    pinModal.classList.remove("hidden");
+  }
+  function hidePin() { pinModal.classList.add("hidden"); }
+
+  function enterReal() {
+    if (forcedSim) { practiceReal = true; paintMode(); return; }
+    location.href = location.pathname;
+  }
+
+  function checkPin() {
+    if (pinEntry === REAL_MODE_PIN) {
+      hidePin();
+      showModal(
+        "Switch to REAL mode?",
+        forcedSim
+          ? "Practice run: on the home kiosk this moves real shutters and the awning. Continue?"
+          : "This will move real shutters and the awning. Continue?",
+        "Yes, make it real", "Stay pretending",
+        function () { enterReal(); }
+      );
+    } else {
+      pinMsg.textContent = "Hmm, that's not it — try again.";
+      pinCard.classList.remove("shake");
+      void pinCard.offsetWidth;
+      pinCard.classList.add("shake");
+      setTimeout(function () { pinEntry = ""; paintPinDots(); }, 650);
+    }
+  }
+
+  window.pinPress = function (d) {
+    if (pinEntry.length >= 4) return;
+    pinEntry += d;
+    paintPinDots();
+    if (pinEntry.length === 4) setTimeout(checkPin, 200);
+  };
+  window.pinClear = function () {
+    pinEntry = "";
+    paintPinDots();
+    pinMsg.textContent = "Enter the 4-digit code to switch to REAL mode.";
+  };
+  window.pinCancel = function () { hidePin(); };
+
+  window.askModeReal = function () {
+    if (isReal()) return;
+    openPin();
+  };
+
+  /* ---- Physical-button behavior (mirrors the wall buttons) ----
+     Tap direction -> go. Tap same direction again -> stop.
+     Tap opposite direction -> reverse (shutters only; the awning
+     plays it safe: opposite press while moving = stop, no reverse). */
+  window.pressDir = function (id, dir) {
+    if (typeof App === "undefined" || !App.cover) return;
+    var want = dir === "Open" ? "up" : "down";
+    var movingDir = null;
+    try {
+      if (typeof State !== "undefined" && State.movingRooms && State.movingRooms[id]) {
+        movingDir = State.movingRooms[id];
+      }
+    } catch (e) { /* brain not ready */ }
+    if (!movingDir) { App.cover(id, dir); return; }
+    if (movingDir === want) { App.cover(id, "Stop"); return; }
+    if (id === "awning") { App.cover(id, "Stop"); return; }
+    App.cover(id, "Stop");
+    setTimeout(function () { App.cover(id, dir); }, 400);
+  };
+
+  /* ---- overlay: curtain reveal ---- */
+  var overlayOpen = false;
+  window.toggleOverlay = function (force) {
+    overlayOpen = typeof force === "boolean" ? force : !overlayOpen;
+    document.getElementById("overlay").classList.toggle("open", overlayOpen);
+    document.getElementById("curtain-left").classList.toggle("drawn", overlayOpen);
+    document.getElementById("curtain-right").classList.toggle("drawn", overlayOpen);
+  };
+
+  /* ---- live state pills + moving-button highlight ---- */
+  var ROOMS = ["kid", "master", "tv_area", "sofa", "awning"];
+  function roomState(id) {
+    try {
+      if (typeof State !== "undefined") {
+        if (State.movingRooms && State.movingRooms[id]) return "moving";
+        var p = (State.positions && State.positions[id]) || 0;
+        if (p >= 95) return "open";
+        if (p <= 5) return "closed";
+        return "mid";
+      }
+    } catch (e) { /* brain not ready yet */ }
+    return "unknown";
+  }
+  var LABELS = { open: "OPEN", closed: "CLOSED", mid: "A BIT OPEN", moving: "MOVING…", unknown: "…" };
+  function paintStates() {
+    ROOMS.forEach(function (id) {
+      var pill = document.getElementById("state-" + id);
+      var card = document.getElementById("card-" + id);
+      if (!pill || !card) return;
+      var st = roomState(id);
+      pill.textContent = LABELS[st];
+      pill.className = "state-pill" + (st === "open" ? " open" : st === "moving" ? " moving" : "");
+      card.classList.toggle("moving", st === "moving");
+      var mv = null;
+      try { mv = (typeof State !== "undefined" && State.movingRooms) ? State.movingRooms[id] : null; } catch (e) {}
+      var upB = document.getElementById("tb-" + id + "-up");
+      var dnB = document.getElementById("tb-" + id + "-down");
+      if (upB) upB.classList.toggle("moving", mv === "up");
+      if (dnB) dnB.classList.toggle("moving", mv === "down");
+    });
+  }
+  setInterval(paintStates, 800);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { setTimeout(paintStates, 600); });
+  } else {
+    setTimeout(paintStates, 600);
+  }
+
+  paintMode();
+})();
+</script>
+<script>
+/* ---- Magic hands on the main screen: swipe = curtains, palm = next photo ----
+   Swipe direction is measured in the USER's perspective: the front camera is
+   mirrored (x' = 1 - x), so a left→right sweep like drawing a curtain reads as
+   x' traveling from the left third to the right third of the frame. */
+(function () {
+  "use strict";
+
+  var HOLD_MS = 900;       // palm hold time for next photo
+  var COOLDOWN_MS = 3000;  // pause between photo changes
+  var SWIPE_DIST = 0.34;   // frame-fraction the hand must travel
+  var SWIPE_MAX_MS = 1400; // slowest allowed swipe
+  var SWIPE_MIN_MS = 120;  // fastest allowed swipe (noise guard)
+
+  var pill = document.getElementById("fallback-pill");
+  var dot = document.getElementById("hand-dot");
+  var flash = document.getElementById("palm-flash");
+
+  function gestureUnavailable() {
+    // Real fallback, not a test button: tap reveals the controls.
+    if (pill) pill.classList.add("show");
+    if (dot) dot.style.display = "none";
+  }
+
+  function isOverlayOpen() {
+    var o = document.getElementById("overlay");
+    return !!(o && o.classList.contains("open"));
+  }
+
+  // Open palm = 4 fingers extended + thumb out (image coords: y grows downward)
+  function isOpenPalm(lm) {
+    try {
+      var fingers = [[8, 6], [12, 10], [16, 14], [20, 18]];
+      for (var i = 0; i < fingers.length; i++) {
+        if (lm[fingers[i][0]].y > lm[fingers[i][1]].y) return false;
+      }
+      var d = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); };
+      if (d(lm[4], lm[0]) < d(lm[3], lm[0]) * 1.15) return false;
+      return true;
+    } catch (e) { return false; }
+  }
+
+  var palmSince = 0;
+  var cooldownUntil = 0;
+  var swipeX = null, swipeT = 0;
+  var lockUntil = 0;
+
+  function resetSwipe() { swipeX = null; }
+
+  function palmFlash() {
+    if (!flash) return;
+    flash.classList.add("show");
+    setTimeout(function () { flash.classList.remove("show"); }, 1100);
+  }
+
+  function onHand(lm) {
+    var now = Date.now();
+    if (dot) dot.classList.add("seen");
+
+    // --- curtain swipe (user's perspective) ---
+    var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
+    if (swipeX === null) { swipeX = x; swipeT = now; }
+    else {
+      var dx = x - swipeX, dt = now - swipeT;
+      if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; }
+      else if (dt >= SWIPE_MIN_MS && now >= lockUntil) {
+        if (dx >= SWIPE_DIST && !isOverlayOpen()) {
+          window.toggleOverlay(true); lockUntil = now + 1600; resetSwipe();
+        } else if (dx <= -SWIPE_DIST && isOverlayOpen()) {
+          window.toggleOverlay(false); lockUntil = now + 1600; resetSwipe();
+        }
+      }
+    }
+
+    // --- palm hold: next photo ---
+    if (isOpenPalm(lm)) {
+      if (!palmSince) palmSince = now;
+      if (now - palmSince >= HOLD_MS && now >= cooldownUntil) {
+        cooldownUntil = now + COOLDOWN_MS;
+        palmSince = 0; resetSwipe();
+        palmFlash();
+        try { if (typeof App !== "undefined" && App.nextSlide) App.nextSlide(); } catch (e) {}
+      }
+    } else {
+      palmSince = 0;
+    }
+  }
+
+  function onNoHand() {
+    if (dot) dot.classList.remove("seen");
+    palmSince = 0;
+    resetSwipe();
+  }
+
+  async function boot() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return gestureUnavailable();
+    if (typeof Hands === "undefined") return gestureUnavailable();
+
+    var stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240, facingMode: "user" }, audio: false
+      });
+    } catch (e) { return gestureUnavailable(); }
+
+    var video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.style.cssText = "position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;";
+    document.body.appendChild(video);
+    video.srcObject = stream;
+    try { await video.play(); } catch (e) { /* some browsers need a tap first */ }
+
+    var hands;
+    try {
+      hands = new Hands({ locateFile: function (f) { return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + f; } });
+      hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+    } catch (e) { return gestureUnavailable(); }
+
+    var busy = false;
+    hands.onResults(function (res) {
+      var list = res && res.multiHandLandmarks;
+      if (list && list[0]) onHand(list[0]); else onNoHand();
+    });
+
+    async function loop() {
+      try {
+        if (!busy && video.readyState >= 2) {
+          busy = true;
+          try { await hands.send({ image: video }); } catch (e) {}
+          busy = false;
+        }
+      } catch (e) { busy = false; }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { boot().catch(gestureUnavailable); });
+  } else {
+    boot().catch(gestureUnavailable);
+  }
+})();
+</script>
+<script>window.__KIOSK_BUILD="__KIOSK_BUILD__";</script>
+<script src="updater.js"></script>
+</body>
+</html>
