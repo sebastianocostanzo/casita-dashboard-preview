@@ -692,6 +692,11 @@
   var swipeX = null, swipeT = 0, lastHandT = 0;
   var sweepEncouraged = false;
   var lockUntil = 0;
+  var lastToggleT = 0;
+  var noPalmSince = 0, lastStepBackHint = 0;
+  var SWIPE_DIST_ANY = 0.28; // deliberate sweep needed for a non-palm close
+  var SWIPE_MIN_ANY_MS = 600;
+  var CLOSE_FUMBLE_MS = 3000; // ignore non-palm sweeps right after opening
 
   function resetSwipe() { swipeX = null; sweepEncouraged = false; }
 
@@ -711,34 +716,53 @@
       showCoach("show your palm — I'm listening", 2600, false);
     }
 
-    // --- palm: hold still = next photo, sweep the palm across = curtains ---
-    // One hand shape, two outcomes. The sweep only needs the palm (not continuous
-    // fingertip tracking), survives brief tracking dropouts, and works in either
-    // direction (front-camera mirroring varies by device).
+    // --- sweep & hold ---
+    // OPEN the curtains needs an open palm (no accidental opens).
+    // CLOSE accepts any tracked hand: when you step up to the controls you are
+    // too close for a clean palm read, so a deliberate hand sweep still works.
     var palmNow = isOpenPalm(lm);
+    var isOpen = overlayOpen();
     if (palmNow && !palmWas) {
-      showCoach(overlayOpen() ? "ready! hold still = next photo \u00b7 sweep across = close"
-                              : "ready! sweep across = controls \u00b7 hold still = next photo", 3200, false);
+      showCoach(isOpen ? "ready! hold still = next photo \u00b7 sweep across = close"
+                       : "ready! sweep across = controls \u00b7 hold still = next photo", 3200, false);
     }
     palmWas = palmNow;
-    if (palmNow) {
+
+    // step-back hint: a hand is there but no readable palm while controls are open
+    if (isOpen && !palmNow) {
+      if (!noPalmSince) noPalmSince = now;
+      if (now - noPalmSince > 2500 && now - lastStepBackHint > 15000) {
+        lastStepBackHint = now;
+        showCoach("step back so I can see your whole hand", 3000, false);
+      }
+    } else {
+      noPalmSince = 0;
+    }
+
+    var canSweep = palmNow || isOpen;
+    if (canSweep) {
       lastHandT = now;
       try {
-        var x = 1 - lm[9].x;
+        var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
         if (swipeX === null) { swipeX = x; swipeT = now; }
         var dx = x - swipeX, dt = now - swipeT, adx = Math.abs(dx);
+        var need = palmNow ? SWIPE_DIST : SWIPE_DIST_ANY;
+        var minDt = palmNow ? SWIPE_MIN_MS : SWIPE_MIN_ANY_MS;
         if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; palmSince = 0; }
-        else if (adx >= SWIPE_DIST && dt >= SWIPE_MIN_MS && now >= lockUntil) {
-          var opening = !overlayOpen();
-          window.toggleOverlay(); lockUntil = now + 1600;
-          resetSwipe(); palmSince = 0; markDemoSeen();
+        else if (!palmNow && isOpen && now - lastToggleT < CLOSE_FUMBLE_MS) {
+          swipeX = x; swipeT = now; // fresh anchor, ignore fumbles right after opening
+        }
+        else if (adx >= need && dt >= minDt && now >= lockUntil) {
+          var opening = !isOpen;
+          window.toggleOverlay(); lockUntil = now + 800; lastToggleT = now;
+          resetSwipe(); palmSince = 0; markDemoSeen(); noPalmSince = 0;
           showCoach(opening ? "controls open \u2014 sweep across to close" : "controls closed", 2400, false);
         }
-        else if (adx >= SWIPE_DIST * 0.55 && !sweepEncouraged) {
+        else if (palmNow && adx >= SWIPE_DIST * 0.55 && !sweepEncouraged) {
           sweepEncouraged = true;
           showCoach("keep going \u2014 sweep across", 1500, false);
         }
-        else if (adx < HOLD_STILL) {
+        else if (palmNow && adx < HOLD_STILL) {
           if (!palmSince) palmSince = now;
           if (now - palmSince >= HOLD_MS && now >= cooldownUntil) {
             cooldownUntil = now + COOLDOWN_MS;
@@ -747,7 +771,7 @@
             try { if (typeof App !== "undefined" && App.nextSlide) App.nextSlide(); } catch (e) {}
           }
         } else {
-          palmSince = 0;
+          palmSince = 0; // moving (or non-palm) hand: sweeping, not holding
         }
       } catch (e) { resetSwipe(); palmSince = 0; }
     } else {
