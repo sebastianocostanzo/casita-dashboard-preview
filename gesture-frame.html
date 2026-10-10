@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>gesture frame</title>
+<!--
+  Invisible camera worker for the kiosk dashboard.
+  Lives on the HTTPS preview (camera needs an HTTPS origin); the dashboard
+  page itself stays on local files (so it keeps LAN device access).
+  Embedded as a hidden iframe with allow="camera"; reports recognized
+  gestures to the parent page via postMessage. No UI, no secrets.
+-->
+</head>
+<body>
+<video id="v" playsinline muted style="width:2px;height:2px;position:absolute;left:-10px;top:-10px;"></video>
+<script type="module">
+  import { FilesetResolver, GestureRecognizer } from
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+  const video = document.getElementById('v');
+  const post = (msg) => { try { parent.postMessage(msg, '*'); } catch (e) {} };
+  const CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+
+  let recognizer = null, timer = null;
+  let stableGesture = null, stableCount = 0, lastSent = null;
+  let lastVideoTime = -1;
+  const STABLE_FRAMES = 4, MIN_SCORE = 0.5;
+
+  function note(gesture, score) {
+    // one post per gesture appearance: fire when a new gesture becomes stable,
+    // re-arm when the hand leaves (so holding doesn't spam)
+    if (gesture !== stableGesture) { stableGesture = gesture; stableCount = 1; return; }
+    if (++stableCount < STABLE_FRAMES) return;
+    if (gesture && gesture !== 'None' && score >= MIN_SCORE && gesture !== lastSent) {
+      lastSent = gesture;
+      post({ type: 'gesture', gesture: gesture, score: Math.round(score * 100) / 100 });
+    }
+    if ((!gesture || gesture === 'None') && stableCount >= STABLE_FRAMES) lastSent = null;
+  }
+
+  async function tick() {
+    if (!recognizer || video.videoWidth === 0) return;
+    if (video.currentTime === lastVideoTime) return;
+    lastVideoTime = video.currentTime;
+    try {
+      const res = recognizer.recognizeForVideo(video, performance.now());
+      if (res.gestures && res.gestures.length && res.gestures[0].length) {
+        const g = res.gestures[0][0];
+        note(g.categoryName, g.score);
+      } else {
+        note(null, 0);
+      }
+    } catch (e) { /* a bad frame must not kill the loop */ }
+  }
+
+  async function start() {
+    try {
+      post({ type: 'gesture-frame', state: 'loading' });
+      const vision = await FilesetResolver.forVisionTasks(CDN + '/wasm');
+      recognizer = await GestureRecognizer.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/' +
+            'gesture_recognizer/float16/1/gesture_recognizer.task',
+          delegate: 'CPU'
+        },
+        runningMode: 'VIDEO',
+        numHands: 1
+      });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      post({ type: 'gesture-frame', state: 'ready' });
+      timer = setInterval(tick, 150);   // timer, not rAF: this frame is hidden
+    } catch (e) {
+      post({ type: 'gesture-frame', state: 'error',
+             message: (e && e.name) ? e.name : String(e) });
+    }
+  }
+
+  // auto-start on load; parent can also command us
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'gesture-control' && e.data.cmd === 'start' && !recognizer) start();
+  });
+  start();
+</script>
+</body>
+</html>
