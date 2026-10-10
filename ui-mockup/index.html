@@ -241,7 +241,7 @@
   <div id="photo-desc">...</div>
 </div>
 
-<p class="hint">👆 <b>Tap once</b> — it travels all the way by itself. <b>Tap Stop</b> anytime to stop it.</p>
+<p class="hint">👆 Tap a direction and it goes there. Tap the <b>same</b> button to stop. Tap the <b>other</b> button to turn around — just like the buttons on the wall.</p>
 
 <div class="rooms">
   <section class="room-column room-card" data-room="kid" id="card-kid">
@@ -250,9 +250,9 @@
       <div id="prog-kid" class="fill"></div><div id="target-kid" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="App.cover('kid','Open')">Open</button>
+      <button class="act open" onclick="pressDir('kid','Open')">Open</button>
       <button class="act stop" onclick="App.cover('kid','Stop')">Stop</button>
-      <button class="act close" onclick="App.cover('kid','Close')">Close</button>
+      <button class="act close" onclick="pressDir('kid','Close')">Close</button>
     </div>
   </section>
 
@@ -262,9 +262,9 @@
       <div id="prog-master" class="fill"></div><div id="target-master" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="App.cover('master','Open')">Open</button>
+      <button class="act open" onclick="pressDir('master','Open')">Open</button>
       <button class="act stop" onclick="App.cover('master','Stop')">Stop</button>
-      <button class="act close" onclick="App.cover('master','Close')">Close</button>
+      <button class="act close" onclick="pressDir('master','Close')">Close</button>
     </div>
   </section>
 
@@ -274,9 +274,9 @@
       <div id="prog-tv_area" class="fill"></div><div id="target-tv_area" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="App.cover('tv_area','Open')">Open</button>
+      <button class="act open" onclick="pressDir('tv_area','Open')">Open</button>
       <button class="act stop" onclick="App.cover('tv_area','Stop')">Stop</button>
-      <button class="act close" onclick="App.cover('tv_area','Close')">Close</button>
+      <button class="act close" onclick="pressDir('tv_area','Close')">Close</button>
     </div>
   </section>
 
@@ -286,9 +286,9 @@
       <div id="prog-sofa" class="fill"></div><div id="target-sofa" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="App.cover('sofa','Open')">Open</button>
+      <button class="act open" onclick="pressDir('sofa','Open')">Open</button>
       <button class="act stop" onclick="App.cover('sofa','Stop')">Stop</button>
-      <button class="act close" onclick="App.cover('sofa','Close')">Close</button>
+      <button class="act close" onclick="pressDir('sofa','Close')">Close</button>
     </div>
   </section>
 </div>
@@ -300,9 +300,9 @@
       <div id="prog-awning" class="fill"></div><div id="target-awning" class="tline"></div>
     </div>
     <div class="btnrow">
-      <button class="act open" onclick="App.cover('awning','Open')">Out</button>
+      <button class="act open" onclick="pressDir('awning','Open')">Out</button>
       <button class="act stop" onclick="App.cover('awning','Stop')">Stop</button>
-      <button class="act close" onclick="App.cover('awning','Close')">In</button>
+      <button class="act close" onclick="pressDir('awning','Close')">In</button>
     </div>
   </div>
   <div style="margin-top:6px"><b id="awning-status">...</b> <span id="sun-intel"></span></div>
@@ -492,6 +492,29 @@
     }
     location.href = location.pathname;
   }
+
+
+  /* ---- Physical-button behavior (mirrors the wall buttons) ----
+     Tap direction -> go. Tap same direction again -> stop.
+     Tap opposite direction -> reverse (shutters only; the awning
+     plays it safe: opposite press while moving = stop, no reverse).
+     The brain's smart-stop would eat a direct reverse command, so the
+     UI sends Stop, waits a beat, then sends the new direction. */
+  window.pressDir = function (id, dir) {
+    if (typeof App === "undefined" || !App.cover) return;
+    var want = dir === "Open" ? "up" : "down";
+    var movingDir = null;
+    try {
+      if (typeof State !== "undefined" && State.movingRooms && State.movingRooms[id]) {
+        movingDir = State.movingRooms[id];
+      }
+    } catch (e) { /* brain not ready */ }
+    if (!movingDir) { App.cover(id, dir); return; }          // stopped -> go
+    if (movingDir === want) { App.cover(id, "Stop"); return; } // same button -> stop
+    if (id === "awning") { App.cover(id, "Stop"); return; }   // safe: no reverse
+    App.cover(id, "Stop");                                    // shutters: reverse
+    setTimeout(function () { App.cover(id, dir); }, 400);
+  };
 
   /* ---- live state pills + pulsing Stop ---- */
   var ROOMS = ["kid", "master", "tv_area", "sofa", "awning"];
