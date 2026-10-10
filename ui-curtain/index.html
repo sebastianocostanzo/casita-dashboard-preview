@@ -64,6 +64,7 @@
     background: #3a2c1c; border: 2px solid var(--line); transition: all .3s;
   }
   #hand-dot.seen { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 12px var(--amber); }
+  #hand-status { font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
   .mode-toggle { display: flex; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; flex: none; }
   .mode-toggle button {
     min-height: 44px; padding: 0 16px; font-size: 15px; font-weight: 800; cursor: pointer;
@@ -263,7 +264,7 @@
       <span class="twx"><span id="temp">--</span> <span id="weather-desc">...</span></span>
     </div>
     <div id="mode-banner" class="pretend">...</div>
-    <div id="hand-dot" title="hand camera"></div>
+    <div id="hand-dot" title="hand camera"></div><span id="hand-status">starting camera…</span>
     <div class="mode-toggle" role="group" aria-label="Pretend or real mode">
       <button id="btn-pretend" onclick="setModePretend()">🧪 Pretend</button>
       <button id="btn-real" onclick="askModeReal()">🏠 Real</button>
@@ -593,10 +594,16 @@
   var dot = document.getElementById("hand-dot");
   var flash = document.getElementById("palm-flash");
 
+  var handStatus = null;
+  function setHandStatus(t) {
+    if (!handStatus) handStatus = document.getElementById("hand-status");
+    if (handStatus) handStatus.textContent = t;
+  }
   function gestureUnavailable() {
     // Real fallback, not a test button: tap reveals the controls.
     if (pill) pill.classList.add("show");
     if (dot) dot.style.display = "none";
+    setHandStatus("camera unavailable");
   }
 
   function isOverlayOpen() {
@@ -633,6 +640,7 @@
   function onHand(lm) {
     var now = Date.now();
     if (dot) dot.classList.add("seen");
+    setHandStatus("hand seen");
 
     // --- curtain swipe (user's perspective) ---
     var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
@@ -665,6 +673,7 @@
 
   function onNoHand() {
     if (dot) dot.classList.remove("seen");
+    setHandStatus("show your hand");
     palmSince = 0;
     resetSwipe();
   }
@@ -686,7 +695,20 @@
     video.style.cssText = "position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;";
     document.body.appendChild(video);
     video.srcObject = stream;
-    try { await video.play(); } catch (e) { /* some browsers need a tap first */ }
+    var playOk = true;
+    try { await video.play(); } catch (e) { playOk = false; }
+    if (!playOk) {
+      // Autoplay blocked: retry on the first tap anywhere.
+      var retryPlay = function () {
+        video.play().then(function () { setHandStatus("show your hand"); },
+                          function () {});
+        document.removeEventListener("pointerdown", retryPlay);
+      };
+      document.addEventListener("pointerdown", retryPlay);
+      setHandStatus("tap once to start camera");
+    } else {
+      setHandStatus("show your hand");
+    }
 
     var hands;
     try {
