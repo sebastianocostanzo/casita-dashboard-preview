@@ -606,8 +606,10 @@
 
   var HOLD_MS = 650;       // palm hold time for next photo (snappy)
   var COOLDOWN_MS = 2200;  // pause between photo changes
-  var SWIPE_DIST = 0.34;   // frame-fraction the hand must travel
-  var SWIPE_MAX_MS = 1400; // slowest allowed swipe
+  var SWIPE_DIST = 0.20;   // frame-fraction the palm must travel (forgiving)
+  var SWIPE_GRACE_MS = 700;// tracking dropouts tolerated mid-sweep (motion blur)
+  var HOLD_STILL = 0.08;   // max drift while "holding" (else it is a sweep)
+  var SWIPE_MAX_MS = 2600; // slowest allowed sweep
   var SWIPE_MIN_MS = 90;   // fastest allowed swipe (noise guard)
 
   var pill = document.getElementById("fallback-pill");
@@ -687,10 +689,11 @@
 
   var palmSince = 0;
   var cooldownUntil = 0;
-  var swipeX = null, swipeT = 0;
+  var swipeX = null, swipeT = 0, lastHandT = 0;
+  var sweepEncouraged = false;
   var lockUntil = 0;
 
-  function resetSwipe() { swipeX = null; }
+  function resetSwipe() { swipeX = null; sweepEncouraged = false; }
 
   function palmFlash() {
     if (!flash) return;
@@ -708,41 +711,48 @@
       showCoach("show your palm — I'm listening", 2600, false);
     }
 
-    // --- curtain swipe (user's perspective) ---
-    try {
-      var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
-      if (swipeX === null) { swipeX = x; swipeT = now; }
-      else {
-        var dx = x - swipeX, dt = now - swipeT;
-        if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; }
-        else if (dt >= SWIPE_MIN_MS && now >= lockUntil) {
-          if (dx >= SWIPE_DIST && !overlayOpen()) {
-            window.toggleOverlay(true); lockUntil = now + 1600; resetSwipe(); markDemoSeen();
-          } else if (dx <= -SWIPE_DIST && overlayOpen()) {
-            window.toggleOverlay(false); lockUntil = now + 1600; resetSwipe();
-          }
-        }
-      }
-    } catch (e) { resetSwipe(); }
-
-    // --- palm hold: next photo ---
+    // --- palm: hold still = next photo, sweep the palm across = curtains ---
+    // One hand shape, two outcomes. The sweep only needs the palm (not continuous
+    // fingertip tracking), survives brief tracking dropouts, and works in either
+    // direction (front-camera mirroring varies by device).
     var palmNow = isOpenPalm(lm);
     if (palmNow && !palmWas) {
-      // palm just recognized = "ready for command": show what can be done
-      showCoach(overlayOpen() ? "hold palm = next photo · sweep left = close"
-                              : "ready! sweep right = controls · hold palm = next photo", 3200, false);
+      showCoach(overlayOpen() ? "ready! hold still = next photo \u00b7 sweep across = close"
+                              : "ready! sweep across = controls \u00b7 hold still = next photo", 3200, false);
     }
     palmWas = palmNow;
     if (palmNow) {
-      if (!palmSince) palmSince = now;
-      if (now - palmSince >= HOLD_MS && now >= cooldownUntil) {
-        cooldownUntil = now + COOLDOWN_MS;
-        palmSince = 0; resetSwipe();
-        palmFlash();
-        try { if (typeof App !== "undefined" && App.nextSlide) App.nextSlide(); } catch (e) {}
-      }
+      lastHandT = now;
+      try {
+        var x = 1 - lm[9].x;
+        if (swipeX === null) { swipeX = x; swipeT = now; }
+        var dx = x - swipeX, dt = now - swipeT, adx = Math.abs(dx);
+        if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; palmSince = 0; }
+        else if (adx >= SWIPE_DIST && dt >= SWIPE_MIN_MS && now >= lockUntil) {
+          var opening = !overlayOpen();
+          window.toggleOverlay(); lockUntil = now + 1600;
+          resetSwipe(); palmSince = 0; markDemoSeen();
+          showCoach(opening ? "controls open \u2014 sweep across to close" : "controls closed", 2400, false);
+        }
+        else if (adx >= SWIPE_DIST * 0.55 && !sweepEncouraged) {
+          sweepEncouraged = true;
+          showCoach("keep going \u2014 sweep across", 1500, false);
+        }
+        else if (adx < HOLD_STILL) {
+          if (!palmSince) palmSince = now;
+          if (now - palmSince >= HOLD_MS && now >= cooldownUntil) {
+            cooldownUntil = now + COOLDOWN_MS;
+            palmSince = 0; resetSwipe();
+            palmFlash();
+            try { if (typeof App !== "undefined" && App.nextSlide) App.nextSlide(); } catch (e) {}
+          }
+        } else {
+          palmSince = 0;
+        }
+      } catch (e) { resetSwipe(); palmSince = 0; }
     } else {
       palmSince = 0;
+      resetSwipe();
     }
   }
 
@@ -750,6 +760,8 @@
     if (dot) dot.classList.remove("seen");
     setHandStatus("show your hand");
     palmWas = false;
+    palmSince = 0;
+    if (swipeX !== null && Date.now() - lastHandT > SWIPE_GRACE_MS) resetSwipe();
     palmSince = 0;
     resetSwipe();
   }
@@ -810,7 +822,7 @@
     }
     loop();
     if (!coachSeenDemo) {
-      setTimeout(function () { showCoach("sweep like drawing a curtain — opens the controls", 0, true); }, 2500);
+      setTimeout(function () { showCoach("flat hand, sweep across — opens the controls", 0, true); }, 2500);
     }
   }
 
