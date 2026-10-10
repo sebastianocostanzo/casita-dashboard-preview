@@ -1,0 +1,1 @@
+window.__KIOSK_LATEST_BUILD = "2026-10-10 05:47 UTC";
