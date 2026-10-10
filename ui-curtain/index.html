@@ -65,6 +65,25 @@
   }
   #hand-dot.seen { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 12px var(--amber); }
   #hand-status { font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+  /* Gesture coach: Sony-style contextual popup on the bottom edge,
+     away from the center where the user's hand is. */
+  #coach {
+    position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%) translateY(20px);
+    z-index: 30; display: flex; align-items: center; gap: 10px;
+    background: rgba(20,12,6,.88); border: 2px solid var(--line); border-radius: 999px;
+    padding: 10px 20px; font-size: 16px; font-weight: 700; color: var(--ink);
+    opacity: 0; pointer-events: none; transition: opacity .35s, transform .35s;
+    white-space: nowrap; max-width: 92%;
+  }
+  #coach.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #coach-hand { font-size: 22px; display: inline-block; }
+  #coach.demo #coach-hand { animation: coachsweep 1.6s ease-in-out infinite; }
+  @keyframes coachsweep {
+    0% { transform: translateX(-46px); opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { transform: translateX(46px); opacity: 0; }
+  }
   .mode-toggle { display: flex; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; flex: none; }
   .mode-toggle button {
     min-height: 44px; padding: 0 16px; font-size: 15px; font-weight: 800; cursor: pointer;
@@ -273,6 +292,7 @@
   </div>
 
   <div id="palm-flash">✋</div>
+  <div id="coach"><span id="coach-hand">✋</span><span id="coach-text"></span></div>
   <button id="fallback-pill" onclick="toggleOverlay()">👆 tap for controls</button>
 
   <!-- control overlay: right sheet -->
@@ -584,11 +604,11 @@
 (function () {
   "use strict";
 
-  var HOLD_MS = 900;       // palm hold time for next photo
-  var COOLDOWN_MS = 3000;  // pause between photo changes
+  var HOLD_MS = 650;       // palm hold time for next photo (snappy)
+  var COOLDOWN_MS = 2200;  // pause between photo changes
   var SWIPE_DIST = 0.34;   // frame-fraction the hand must travel
   var SWIPE_MAX_MS = 1400; // slowest allowed swipe
-  var SWIPE_MIN_MS = 120;  // fastest allowed swipe (noise guard)
+  var SWIPE_MIN_MS = 90;   // fastest allowed swipe (noise guard)
 
   var pill = document.getElementById("fallback-pill");
   var dot = document.getElementById("hand-dot");
@@ -598,6 +618,42 @@
     var o = document.getElementById("overlay");
     return !!(o && o.classList.contains("open"));
   }
+
+  /* ---- Gesture coach (Sony-style): contextual hints on the bottom edge ----
+     Hand seen      -> "show your palm, I'm listening"
+     Palm recognized-> "ready": sweep right = controls, hold = next photo
+     First run      -> animated sweep demo until the first successful swipe   */
+  var coachEl = null, coachText = null, coachHand = null, coachTimer = 0;
+  var coachSeenDemo = false;
+  try { coachSeenDemo = !!localStorage.getItem("casita_coach_seen"); } catch (e) {}
+  function coachInit() {
+    if (!coachEl) {
+      coachEl = document.getElementById("coach");
+      coachText = document.getElementById("coach-text");
+      coachHand = document.getElementById("coach-hand");
+    }
+  }
+  function showCoach(text, ms, demo) {
+    coachInit();
+    if (!coachEl) return;
+    coachText.textContent = text;
+    coachEl.classList.toggle("demo", !!demo);
+    coachEl.classList.add("show");
+    if (coachTimer) clearTimeout(coachTimer);
+    if (ms) coachTimer = setTimeout(hideCoach, ms);
+  }
+  function hideCoach() {
+    coachInit();
+    if (coachTimer) { clearTimeout(coachTimer); coachTimer = 0; }
+    if (coachEl) coachEl.classList.remove("show", "demo");
+  }
+  function markDemoSeen() {
+    if (coachSeenDemo) return;
+    coachSeenDemo = true;
+    try { localStorage.setItem("casita_coach_seen", "1"); } catch (e) {}
+    hideCoach();
+  }
+  var lastSeeHint = 0;
 
   var handStatus = null;
   function setHandStatus(t) {
@@ -642,10 +698,15 @@
     setTimeout(function () { flash.classList.remove("show"); }, 1100);
   }
 
+  var palmWas = false;
   function onHand(lm) {
     var now = Date.now();
     if (dot) dot.classList.add("seen");
     setHandStatus("hand seen");
+    if (!palmWas && now - lastSeeHint > 30000) {
+      lastSeeHint = now;
+      showCoach("show your palm — I'm listening", 2600, false);
+    }
 
     // --- curtain swipe (user's perspective) ---
     try {
@@ -656,7 +717,7 @@
         if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; }
         else if (dt >= SWIPE_MIN_MS && now >= lockUntil) {
           if (dx >= SWIPE_DIST && !overlayOpen()) {
-            window.toggleOverlay(true); lockUntil = now + 1600; resetSwipe();
+            window.toggleOverlay(true); lockUntil = now + 1600; resetSwipe(); markDemoSeen();
           } else if (dx <= -SWIPE_DIST && overlayOpen()) {
             window.toggleOverlay(false); lockUntil = now + 1600; resetSwipe();
           }
@@ -665,7 +726,14 @@
     } catch (e) { resetSwipe(); }
 
     // --- palm hold: next photo ---
-    if (isOpenPalm(lm)) {
+    var palmNow = isOpenPalm(lm);
+    if (palmNow && !palmWas) {
+      // palm just recognized = "ready for command": show what can be done
+      showCoach(overlayOpen() ? "hold palm = next photo · sweep left = close"
+                              : "ready! sweep right = controls · hold palm = next photo", 3200, false);
+    }
+    palmWas = palmNow;
+    if (palmNow) {
       if (!palmSince) palmSince = now;
       if (now - palmSince >= HOLD_MS && now >= cooldownUntil) {
         cooldownUntil = now + COOLDOWN_MS;
@@ -681,6 +749,7 @@
   function onNoHand() {
     if (dot) dot.classList.remove("seen");
     setHandStatus("show your hand");
+    palmWas = false;
     palmSince = 0;
     resetSwipe();
   }
@@ -740,6 +809,9 @@
       requestAnimationFrame(loop);
     }
     loop();
+    if (!coachSeenDemo) {
+      setTimeout(function () { showCoach("sweep like drawing a curtain — opens the controls", 0, true); }, 2500);
+    }
   }
 
   if (document.readyState === "loading") {
