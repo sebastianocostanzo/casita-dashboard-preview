@@ -16,47 +16,47 @@
   body {
     margin: 0; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
     background: radial-gradient(1200px 800px at 20% -10%, #3a2415 0%, var(--bg1) 55%, var(--bg0) 100%);
-    color: var(--ink); padding: 0 20px 28px;
+    color: var(--ink); padding: 0 20px 12px;
   }
 
   /* ---------- mode banner (always visible) ---------- */
   #mode-banner {
-    margin: 0 -20px 0; padding: 10px 20px; text-align: center;
-    font-size: 21px; font-weight: 700; letter-spacing: .3px;
+    margin: 0 -20px 0; padding: 6px 20px; text-align: center;
+    font-size: 18px; font-weight: 700; letter-spacing: .3px;
     position: sticky; top: 0; z-index: 50;
   }
   #mode-banner.pretend { background: #1e4d2b; color: #c9f2d4; border-bottom: 3px solid var(--green); }
   #mode-banner.real { background: #5a3a10; color: #ffe3b3; border-bottom: 3px solid var(--amber); }
 
-  header { display: flex; align-items: center; gap: 18px; padding: 14px 0 10px; flex-wrap: wrap; }
-  h1 { font-size: 44px; margin: 0; }
-  h1 small { display: block; font-size: 18px; font-weight: 400; color: var(--ink-dim); }
+  header { display: flex; align-items: center; gap: 16px; padding: 8px 0 6px; flex-wrap: wrap; }
+  h1 { font-size: 32px; margin: 0; }
+  h1 small { display: block; font-size: 15px; font-weight: 400; color: var(--ink-dim); }
 
   /* ---------- pretend/real toggle ---------- */
   .mode-toggle {
-    display: flex; border: 3px solid var(--line); border-radius: 22px; overflow: hidden;
+    display: flex; border: 3px solid var(--line); border-radius: 20px; overflow: hidden;
     margin-left: auto;
   }
   .mode-toggle button {
-    min-height: 72px; padding: 0 30px; font-size: 24px; font-weight: 800; cursor: pointer;
+    min-height: 64px; padding: 0 22px; font-size: 20px; font-weight: 800; cursor: pointer;
     border: none; background: #241a10; color: var(--ink-dim);
   }
   .mode-toggle button.active-pretend { background: var(--green-deep); color: #fff; }
   .mode-toggle button.active-real { background: #8a5a17; color: #fff; }
 
-  .wx { text-align: right; font-size: 18px; line-height: 1.35; color: var(--ink-dim); }
-  .wx #temp { font-size: 28px; font-weight: 700; color: var(--ink); }
-  .clock { font-size: 36px; font-weight: 700; min-width: 130px; text-align: right; }
+  .wx { text-align: right; font-size: 15px; line-height: 1.35; color: var(--ink-dim); }
+  .wx #temp { font-size: 22px; font-weight: 700; color: var(--ink); }
+  .clock { font-size: 28px; font-weight: 700; min-width: 110px; text-align: right; }
   .badge {
-    display: inline-block; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+    display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: 1px;
     background: #241a10; border: 2px solid var(--line); color: var(--ink-dim);
-    border-radius: 999px; padding: 6px 16px; margin-bottom: 10px;
+    border-radius: 999px; padding: 4px 14px; margin-bottom: 6px;
   }
 
   /* ---------- photo banner ---------- */
   .photo-banner {
-    position: relative; height: 150px; border-radius: 24px; overflow: hidden;
-    border: 2px solid var(--line); margin-bottom: 12px; background: #241a10;
+    position: relative; height: 96px; border-radius: 20px; overflow: hidden;
+    border: 2px solid var(--line); margin-bottom: 8px; background: #241a10;
     box-shadow: 0 6px 24px rgba(0,0,0,.35);
   }
   .slide-container { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
@@ -69,23 +69,23 @@
   }
 
   .hint {
-    text-align: center; font-size: 21px; color: var(--ink); margin: 6px 0 14px;
+    text-align: center; font-size: 18px; color: var(--ink); margin: 4px 0 8px;
     background: rgba(240,162,74,.10); border: 2px dashed rgba(240,162,74,.45);
-    border-radius: 18px; padding: 10px 16px;
+    border-radius: 16px; padding: 7px 14px;
   }
   .hint b { color: var(--amber); }
 
   /* ---------- room cards ---------- */
-  .rooms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
+  .rooms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 10px; }
   .room-card {
-    background: var(--card); border: 2px solid var(--line); border-radius: 26px;
-    padding: 16px 14px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    background: var(--card); border: 2px solid var(--line); border-radius: 22px;
+    padding: 12px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px;
     box-shadow: 0 6px 20px rgba(0,0,0,.30);
   }
   .room-top { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .room-top h3 { margin: 0; font-size: 23px; }
+  .room-top h3 { margin: 0; font-size: 20px; }
   .state-pill {
-    font-size: 15px; font-weight: 800; letter-spacing: .6px; padding: 6px 12px; border-radius: 999px;
+    font-size: 14px; font-weight: 800; letter-spacing: .6px; padding: 5px 10px; border-radius: 999px;
     background: #241a10; border: 2px solid var(--line); color: var(--ink-dim); white-space: nowrap;
   }
   .state-pill.open { color: #c9f2d4; border-color: var(--green); }
@@ -93,7 +93,7 @@
   @keyframes pillblink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
   .bar {
-    position: relative; width: 58px; height: 148px; border-radius: 18px;
+    position: relative; width: 58px; height: 120px; border-radius: 16px;
     background: var(--bg0); border: 2px solid var(--line); overflow: hidden; cursor: pointer;
   }
   .fill {
@@ -105,8 +105,8 @@
 
   .btnrow { display: flex; gap: 10px; width: 100%; }
   .act {
-    flex: 1; min-height: 68px; border-radius: 18px; cursor: pointer;
-    font-size: 21px; font-weight: 800; color: var(--ink); padding: 0 6px;
+    flex: 1; min-height: 64px; border-radius: 16px; cursor: pointer;
+    font-size: 19px; font-weight: 800; color: var(--ink); padding: 0 6px;
     border: 3px solid; background: var(--card2);
   }
   .act.open { border-color: var(--green); }
@@ -120,8 +120,8 @@
 
   /* ---------- awning (full width) ---------- */
   .awning-card {
-    background: var(--card); border: 2px solid var(--line); border-radius: 26px;
-    padding: 16px 20px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.30);
+    background: var(--card); border: 2px solid var(--line); border-radius: 22px;
+    padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.30);
   }
   .awning-inner { display: flex; align-items: center; gap: 18px; }
   .awning-inner .room-top { width: auto; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 190px; }
@@ -130,31 +130,59 @@
     background: linear-gradient(90deg, var(--amber), var(--amber-deep)); transition: width .25s; }
   .bar.h .tline { top: 0; bottom: 0; left: auto; right: auto; width: 4px; height: auto; }
   .awning-inner .btnrow { width: auto; }
-  .awning-inner .act { min-width: 110px; }
-  #awning-status { font-size: 16px; color: var(--ink-dim); }
-  #sun-intel { font-size: 15px; color: var(--ink-dim); }
+  .awning-inner .act { min-width: 100px; }
+  #awning-status { font-size: 14px; color: var(--ink-dim); }
+  #sun-intel { font-size: 14px; color: var(--ink-dim); }
 
   /* ---------- tv + magic hands ---------- */
   .bottom-row { display: flex; gap: 14px; align-items: stretch; }
   .tv-card {
-    flex: 1.4; background: var(--card); border: 2px solid var(--line); border-radius: 26px;
-    padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+    flex: 1.4; background: var(--card); border: 2px solid var(--line); border-radius: 22px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 14px;
   }
-  .tv-card h3 { margin: 0; font-size: 25px; }
+  .tv-card h3 { margin: 0; font-size: 22px; }
   #tv-status-text { font-size: 18px; color: var(--ink-dim); flex: 1; }
   .tvbtn {
-    min-width: 72px; min-height: 68px; border-radius: 18px; cursor: pointer;
+    min-width: 64px; min-height: 64px; border-radius: 16px; cursor: pointer;
     border: 3px solid var(--amber); background: var(--card2); color: var(--ink);
-    font-size: 20px; font-weight: 800; padding: 0 18px;
+    font-size: 18px; font-weight: 800; padding: 0 14px;
   }
   #tv-power-btn.online { background: var(--green-deep); border-color: var(--green); }
   #tv-mute-btn.muted { background: #7a1f1f; border-color: var(--red); }
   .magic-link {
     flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px;
     background: linear-gradient(150deg, #4a2a86, #2c1a52); border: 3px solid #7a5fc9;
-    border-radius: 26px; color: #f2ecff; text-decoration: none;
-    font-size: 24px; font-weight: 800; padding: 14px 20px; text-align: center;
+    border-radius: 22px; color: #f2ecff; text-decoration: none;
+    font-size: 21px; font-weight: 800; padding: 10px 16px; text-align: center;
   }
+
+  /* ---------- PIN pad (real-mode kid-guard) ---------- */
+  #pin-modal { position: fixed; inset: 0; background: rgba(10,6,3,.72); z-index: 110;
+    display: flex; align-items: center; justify-content: center; padding: 24px; }
+  #pin-modal.hidden { display: none; }
+  .pin-card {
+    background: var(--card); border: 3px solid var(--amber); border-radius: 30px;
+    padding: 28px 32px; width: 400px; text-align: center;
+    box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  }
+  .pin-card h2 { margin: 0 0 8px; font-size: 30px; }
+  .pin-card p { font-size: 19px; line-height: 1.45; color: var(--ink); margin: 0 0 16px; min-height: 56px; }
+  .pin-dots { display: flex; gap: 16px; justify-content: center; margin-bottom: 18px; }
+  .pin-dot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line); background: #241a10; }
+  .pin-dot.filled { background: var(--amber); border-color: var(--amber); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pin-key {
+    min-height: 72px; border-radius: 18px; cursor: pointer;
+    font-size: 28px; font-weight: 800; color: var(--ink);
+    border: 3px solid var(--line); background: var(--card2);
+  }
+  .pin-key:active { background: #5a3d1c; }
+  .pin-key.util { font-size: 20px; border-color: #8a6a4a; }
+  @keyframes pinshake {
+    0%,100% { transform: translateX(0); } 20% { transform: translateX(-12px); }
+    40% { transform: translateX(12px); } 60% { transform: translateX(-8px); } 80% { transform: translateX(8px); }
+  }
+  .pin-card.shake { animation: pinshake .45s; }
 
   /* ---------- modal ---------- */
   #modal { position: fixed; inset: 0; background: rgba(10,6,3,.72); z-index: 100;
@@ -181,6 +209,13 @@
     .mode-toggle { margin-left: 0; }
     .bottom-row { flex-direction: column; }
     .awning-inner { flex-wrap: wrap; }
+  }
+  /* shorter landscape screens: squeeze the decorative bits, never the buttons */
+  @media (max-height: 780px) {
+    .photo-banner { height: 72px; margin-bottom: 6px; }
+    .hint { font-size: 16px; padding: 5px 12px; margin: 2px 0 6px; }
+    .bar { height: 104px; }
+    header { padding: 6px 0 4px; }
   }
 </style>
 </head>
@@ -270,7 +305,7 @@
       <button class="act close" onclick="App.cover('awning','Close')">In</button>
     </div>
   </div>
-  <div style="margin-top:10px"><b id="awning-status">...</b> <span id="sun-intel"></span></div>
+  <div style="margin-top:6px"><b id="awning-status">...</b> <span id="sun-intel"></span></div>
 </section>
 
 <div class="bottom-row">
@@ -280,7 +315,7 @@
     <button id="tv-mute-btn" class="tvbtn" onclick="App.tv('audio','setAudioMute',{})">Mute</button>
     <button id="tv-power-btn" class="tvbtn" onclick="App.tv('system','setPowerStatus',{status:!this.classList.contains('online')})">Power</button>
   </div>
-  <a class="magic-link" href="gesture.html?sim">✋ Magic Hands<br><small style="font-size:17px;font-weight:400">wave to change the photo</small></a>
+  <a class="magic-link" href="gesture.html?sim">✋ Magic Hands<br><small style="font-size:15px;font-weight:400">wave to change the photo</small></a>
 </div>
 
 <!-- Required by App.init (hidden) -->
@@ -297,6 +332,31 @@
     <div class="modal-btns">
       <button id="modal-yes"></button>
       <button id="modal-no"></button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN pad for real mode -->
+<div id="pin-modal" class="hidden" role="dialog" aria-modal="true" aria-label="Enter code for real mode">
+  <div class="pin-card" id="pin-card">
+    <h2>🔐 Grown-ups only</h2>
+    <p id="pin-msg">Enter the 4-digit code to switch to REAL mode.</p>
+    <div class="pin-dots" id="pin-dots" aria-hidden="true">
+      <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key util" onclick="pinClear()">Clear</button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key util" onclick="pinCancel()" aria-label="Cancel">✕</button>
     </div>
   </div>
 </div>
@@ -349,6 +409,61 @@
     location.search = "?sim";
   };
 
+  // Kid-guard, not real security: keeps little fingers out of REAL mode.
+  // It only gates this UI toggle — nothing on the device or network trusts it.
+  var REAL_MODE_PIN = "0872";
+
+  var pinModal = document.getElementById("pin-modal");
+  var pinCard = document.getElementById("pin-card");
+  var pinDots = document.getElementById("pin-dots");
+  var pinMsg = document.getElementById("pin-msg");
+  var pinEntry = "";
+
+  function paintPinDots() {
+    var dots = pinDots.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = "pin-dot" + (i < pinEntry.length ? " filled" : "");
+    }
+  }
+  function openPin() {
+    pinEntry = "";
+    paintPinDots();
+    pinMsg.textContent = "Enter the 4-digit code to switch to REAL mode.";
+    pinModal.classList.remove("hidden");
+  }
+  function hidePin() { pinModal.classList.add("hidden"); }
+
+  function checkPin() {
+    if (pinEntry === REAL_MODE_PIN) {
+      hidePin();
+      showModal(
+        "Switch to REAL mode?",
+        "This will move real shutters and the awning. Continue?",
+        "Yes, make it real", "Stay pretending",
+        function () { location.href = location.pathname; }
+      );
+    } else {
+      pinMsg.textContent = "Hmm, that's not it — try again.";
+      pinCard.classList.remove("shake");
+      void pinCard.offsetWidth;
+      pinCard.classList.add("shake");
+      setTimeout(function () { pinEntry = ""; paintPinDots(); }, 650);
+    }
+  }
+
+  window.pinPress = function (d) {
+    if (pinEntry.length >= 4) return;
+    pinEntry += d;
+    paintPinDots();
+    if (pinEntry.length === 4) setTimeout(checkPin, 200);
+  };
+  window.pinClear = function () {
+    pinEntry = "";
+    paintPinDots();
+    pinMsg.textContent = "Enter the 4-digit code to switch to REAL mode.";
+  };
+  window.pinCancel = function () { hidePin(); };
+
   window.askModeReal = function () {
     if (!isSim) return;
     if (forcedSim) {
@@ -359,12 +474,7 @@
       );
       return;
     }
-    showModal(
-      "Switch to REAL mode?",
-      "This will move real shutters and the awning. Continue?",
-      "Yes, make it real", "Stay pretending",
-      function () { location.href = location.pathname; }
-    );
+    openPin();
   };
 
   /* ---- live state pills + pulsing Stop ---- */
