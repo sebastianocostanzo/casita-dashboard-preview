@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita — Design B</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117; color: #e6edf3; padding: 16px 20px 24px;
+  }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .back {
+    display: flex; align-items: center; justify-content: center; min-width: 64px; min-height: 64px;
+    border-radius: 14px; background: #161b22; color: #e6edf3; text-decoration: none;
+    font-size: 30px; border: 1px solid #30363d;
+  }
+  h1 { font-size: 32px; margin: 0; flex: 1; font-weight: 600; }
+  h1 small { display: block; font-size: 15px; font-weight: 400; color: #8b949e; }
+  .clock { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .wx { text-align: right; font-size: 15px; color: #8b949e; line-height: 1.4; }
+  .wx #temp { font-size: 24px; font-weight: 600; color: #e6edf3; }
+
+  .strip {
+    position: relative; height: 110px; border-radius: 14px; overflow: hidden;
+    background: #161b22; border: 1px solid #30363d; margin-bottom: 14px;
+  }
+  .slide-container { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
+  .slide-container.active { opacity: 1; }
+  .blur-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(24px) brightness(.55); }
+  .sharp-img { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; }
+  #photo-desc { position: absolute; left: 12px; bottom: 8px; font-size: 14px; color: #c9d1d9; background: rgba(0,0,0,.5); padding: 4px 10px; border-radius: 8px; }
+
+  .row {
+    display: flex; align-items: center; gap: 14px; background: #161b22;
+    border: 1px solid #30363d; border-radius: 14px; padding: 10px 14px; margin-bottom: 10px;
+  }
+  .row h3 { margin: 0; font-size: 21px; font-weight: 600; width: 170px; flex: none; }
+  .bar {
+    position: relative; width: 40px; height: 96px; border-radius: 10px; flex: none;
+    background: #0d1117; border: 1px solid #30363d; overflow: hidden; cursor: pointer;
+  }
+  .bar.h { width: 220px; height: 40px; }
+  .fill { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; background: #58a6ff; transition: height .2s; }
+  .bar.h .fill { top: 0; bottom: 0; width: 0%; height: auto; transition: width .2s; }
+  .tline { position: absolute; left: 0; right: 0; height: 3px; background: #fff; opacity: 0; }
+  .tline.visible { opacity: .9; }
+  .bar.h .tline { top: 0; bottom: 0; left: auto; width: 3px; height: auto; }
+  .pct { font-size: 15px; color: #8b949e; width: 52px; flex: none; font-variant-numeric: tabular-nums; }
+  .btns { display: flex; gap: 10px; margin-left: auto; }
+  .ghost-btn {
+    min-width: 64px; min-height: 64px; border-radius: 12px; border: 1px solid #30363d;
+    background: #21262d; color: #e6edf3; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600;
+  }
+  .ghost-btn svg { width: 26px; height: 26px; }
+  .ghost-btn:disabled { opacity: .3; }
+  .stop {
+    min-width: 64px; min-height: 64px; border-radius: 12px; border: 1px solid #30363d;
+    background: transparent; color: #8b949e; font-size: 17px; font-weight: 600; cursor: pointer;
+  }
+  .sub { font-size: 14px; color: #8b949e; }
+  .sub b { color: #58a6ff; font-weight: 600; }
+
+  .tvrow {
+    display: flex; align-items: center; gap: 14px; background: #161b22;
+    border: 1px solid #30363d; border-radius: 14px; padding: 10px 14px;
+  }
+  .tvrow h3 { margin: 0; font-size: 21px; font-weight: 600; }
+  #tv-status-text { font-size: 15px; color: #8b949e; flex: 1; }
+  .tvbtn {
+    min-width: 64px; min-height: 64px; border-radius: 12px; cursor: pointer;
+    border: 1px solid #30363d; background: #21262d; color: #e6edf3;
+    font-size: 17px; font-weight: 600; padding: 0 14px;
+  }
+  #tv-power-btn.online { background: #1a4d2e; border-color: #2ea043; }
+  #tv-mute-btn.muted { background: #5a1f1f; border-color: #da3633; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="index.html?sim" aria-label="Back to designs">&#8249;</a>
+  <h1>Casita <small>Design B &middot; simple and tidy</small></h1>
+  <div class="wx"><span id="temp">--</span><br><span id="weather-desc">...</span></div>
+  <div class="clock" id="widget-clock">--:--</div>
+</header>
+
+<div class="strip">
+  <div id="slide-1" class="slide-container active"><div id="blur-1" class="blur-bg"></div><div id="sharp-1" class="sharp-img"></div></div>
+  <div id="slide-2" class="slide-container"><div id="blur-2" class="blur-bg"></div><div id="sharp-2" class="sharp-img"></div></div>
+  <div id="photo-desc">...</div>
+</div>
+
+<div class="room-column row" data-room="kid">
+  <h3>Kid's Room</h3>
+  <div class="bar" onclick="App.seek(event,'kid')"><div id="prog-kid" class="fill"></div><div id="target-kid" class="tline"></div></div>
+  <div class="btns">
+    <button class="ghost-btn" onclick="App.cover('kid','Open')" aria-label="Open"></button>
+    <button class="stop" onclick="App.cover('kid','Stop')">Stop</button>
+    <button class="ghost-btn" onclick="App.cover('kid','Close')" aria-label="Close"></button>
+  </div>
+</div>
+
+<div class="room-column row" data-room="master">
+  <h3>Master Bedroom</h3>
+  <div class="bar" onclick="App.seek(event,'master')"><div id="prog-master" class="fill"></div><div id="target-master" class="tline"></div></div>
+  <div class="btns">
+    <button class="ghost-btn" onclick="App.cover('master','Open')" aria-label="Open"></button>
+    <button class="stop" onclick="App.cover('master','Stop')">Stop</button>
+    <button class="ghost-btn" onclick="App.cover('master','Close')" aria-label="Close"></button>
+  </div>
+</div>
+
+<div class="room-column row" data-room="tv_area">
+  <h3>TV Area</h3>
+  <div class="bar" onclick="App.seek(event,'tv_area')"><div id="prog-tv_area" class="fill"></div><div id="target-tv_area" class="tline"></div></div>
+  <div class="btns">
+    <button class="ghost-btn" onclick="App.cover('tv_area','Open')" aria-label="Open"></button>
+    <button class="stop" onclick="App.cover('tv_area','Stop')">Stop</button>
+    <button class="ghost-btn" onclick="App.cover('tv_area','Close')" aria-label="Close"></button>
+  </div>
+</div>
+
+<div class="room-column row" data-room="sofa">
+  <h3>Sofa</h3>
+  <div class="bar" onclick="App.seek(event,'sofa')"><div id="prog-sofa" class="fill"></div><div id="target-sofa" class="tline"></div></div>
+  <div class="btns">
+    <button class="ghost-btn" onclick="App.cover('sofa','Open')" aria-label="Open"></button>
+    <button class="stop" onclick="App.cover('sofa','Stop')">Stop</button>
+    <button class="ghost-btn" onclick="App.cover('sofa','Close')" aria-label="Close"></button>
+  </div>
+</div>
+
+<div class="room-column row" data-room="awning">
+  <h3>Patio Awning</h3>
+  <div class="bar h" onclick="App.seek(event,'awning',true)"><div id="prog-awning" class="fill"></div><div id="target-awning" class="tline"></div></div>
+  <div class="sub"><b id="awning-status">...</b> &middot; <span id="sun-intel"></span></div>
+  <div class="btns">
+    <button class="ghost-btn" onclick="App.cover('awning','Close')" aria-label="In"></button>
+    <button class="stop" onclick="App.cover('awning','Stop')">Stop</button>
+    <button class="ghost-btn" onclick="App.cover('awning','Open')" aria-label="Out"></button>
+  </div>
+</div>
+
+<div class="tvrow">
+  <h3>TV</h3>
+  <span id="tv-status-text">...</span>
+  <button id="tv-mute-btn" class="tvbtn" onclick="App.tv('audio','setAudioMute',{})">Mute</button>
+  <button id="tv-power-btn" class="tvbtn" onclick="App.tv('system','setPowerStatus',{status:!this.classList.contains('online')})">Power</button>
+</div>
+
+<!-- Required by App.init (hidden) -->
+<div style="display:none" aria-hidden="true">
+  <div id="control-drawer"></div><div id="debug-log"></div>
+  <div id="super-widget"></div>
+</div>
+
+<script src="photos_data.js"></script>
+<script src="app_v89.js"></script>
+<script>window.__KIOSK_BUILD="__KIOSK_BUILD__";</script>
+<script src="updater.js"></script>
+</body>
+</html>

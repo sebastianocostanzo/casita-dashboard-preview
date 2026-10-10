@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita — Design C</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #101418; color: #fff; padding: 16px 20px 24px;
+    display: flex; flex-direction: column;
+  }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .back {
+    display: flex; align-items: center; justify-content: center; min-width: 64px; min-height: 64px;
+    border-radius: 16px; background: #1c2128; color: #fff; text-decoration: none; font-size: 30px;
+  }
+  h1 { font-size: 34px; margin: 0; flex: 1; }
+  h1 small { display: block; font-size: 16px; font-weight: 400; color: #9aa4b2; }
+  .clock { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; flex: 1; }
+  .giant {
+    border: none; border-radius: 28px; cursor: pointer; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: #1c2128; min-height: 250px; padding: 20px;
+    border: 4px solid #2c333d;
+  }
+  .giant:active { transform: scale(.98); }
+  .giant .g-name { font-size: 38px; font-weight: 700; }
+  .giant .g-state { font-size: 30px; font-weight: 800; letter-spacing: 2px; padding: 10px 28px; border-radius: 16px; background: rgba(255,255,255,.12); }
+  .giant.is-open { border-color: #3fb950; }
+  .giant.is-open .g-state { background: #1f6f2e; }
+  .giant.is-closed { border-color: #6e7681; }
+  .giant.is-closed .g-state { background: #444c56; }
+  .giant.is-moving { border-color: #d29922; }
+  .giant.is-moving .g-state { background: #7a5a17; }
+  .hint { text-align: center; font-size: 20px; color: #9aa4b2; margin-top: 16px; }
+
+  /* Slideshow runs hidden (photos still load for the brain) */
+  .hidden-slides { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+  .slide-container.active { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="index.html?sim" aria-label="Back to designs">&#8249;</a>
+  <h1>Casita <small>Design C &middot; super big buttons, super easy</small></h1>
+  <div class="clock" id="widget-clock">--:--</div>
+</header>
+
+<div class="grid">
+  <button class="giant" id="g-kid" onclick="toggleRoom('kid')">
+    <span class="g-name">Kid's Room</span><span class="g-state" id="gstate-kid">...</span>
+  </button>
+  <button class="giant" id="g-master" onclick="toggleRoom('master')">
+    <span class="g-name">Master Bedroom</span><span class="g-state" id="gstate-master">...</span>
+  </button>
+  <button class="giant" id="g-tv_area" onclick="toggleRoom('tv_area')">
+    <span class="g-name">TV Area</span><span class="g-state" id="gstate-tv_area">...</span>
+  </button>
+  <button class="giant" id="g-sofa" onclick="toggleRoom('sofa')">
+    <span class="g-name">Sofa</span><span class="g-state" id="gstate-sofa">...</span>
+  </button>
+  <button class="giant" id="g-awning" onclick="toggleRoom('awning')">
+    <span class="g-name">Patio Awning</span><span class="g-state" id="gstate-awning">...</span>
+  </button>
+</div>
+
+<p class="hint">Tap a room to open or close its shutters. Tap again while moving to stop.</p>
+
+<div class="hidden-slides" aria-hidden="true">
+  <div id="slide-1" class="slide-container active"><div id="blur-1"></div><div id="sharp-1"></div></div>
+  <div id="slide-2" class="slide-container"><div id="blur-2"></div><div id="sharp-2"></div></div>
+</div>
+
+<!-- Required by App.init (hidden) -->
+<div style="display:none" aria-hidden="true">
+  <div id="awning-status"></div><div id="control-drawer"></div><div id="debug-log"></div>
+  <div id="photo-desc"></div><div id="sun-intel"></div><div id="super-widget"></div>
+  <div id="temp"></div><button id="tv-mute-btn"></button><button id="tv-power-btn"></button>
+  <div id="tv-status-text"></div><div id="weather-desc"></div>
+  <div id="prog-kid"></div><div id="prog-master"></div><div id="prog-tv_area"></div>
+  <div id="prog-sofa"></div><div id="prog-awning"></div>
+  <div id="target-kid"></div><div id="target-master"></div><div id="target-tv_area"></div>
+  <div id="target-sofa"></div><div id="target-awning"></div>
+</div>
+
+<script src="photos_data.js"></script>
+<script src="app_v89.js"></script>
+<script>
+(function () {
+  "use strict";
+  var ROOMS = ["kid", "master", "tv_area", "sofa", "awning"];
+
+  function labelFor(id) {
+    try {
+      if (typeof State !== "undefined") {
+        if (State.movingRooms && State.movingRooms[id]) return "MOVING";
+        var p = (State.positions && State.positions[id]) || 0;
+        if (p >= 95) return "OPEN";
+        if (p <= 5) return "CLOSED";
+        return "A BIT OPEN";
+      }
+    } catch (e) { /* brain not ready yet */ }
+    return "...";
+  }
+
+  function paintGiant() {
+    ROOMS.forEach(function (id) {
+      var el = document.getElementById("gstate-" + id);
+      var btn = document.getElementById("g-" + id);
+      if (!el || !btn) return;
+      var label = labelFor(id);
+      el.textContent = label;
+      btn.classList.toggle("is-open", label === "OPEN");
+      btn.classList.toggle("is-closed", label === "CLOSED");
+      btn.classList.toggle("is-moving", label === "MOVING" || label === "A BIT OPEN");
+    });
+  }
+
+  window.toggleRoom = function (id) {
+    try {
+      if (typeof App === "undefined" || !App.cover) return;
+      var moving = (typeof State !== "undefined") && State.movingRooms && State.movingRooms[id];
+      if (moving) { App.cover(id, "Stop"); }
+      else {
+        var p = (typeof State !== "undefined" && State.positions && State.positions[id]) || 0;
+        App.cover(id, p > 50 ? "Close" : "Open");
+      }
+      setTimeout(paintGiant, 250);
+    } catch (e) { /* stay friendly, never crash */ }
+  };
+
+  setInterval(paintGiant, 800);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { setTimeout(paintGiant, 500); });
+  } else {
+    setTimeout(paintGiant, 500);
+  }
+})();
+</script>
+<script>window.__KIOSK_BUILD="__KIOSK_BUILD__";</script>
+<script src="updater.js"></script>
+</body>
+</html>

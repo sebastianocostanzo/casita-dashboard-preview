@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita — Design A</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 800px at 20% -10%, #3a2415 0%, #1c130c 55%, #140d08 100%);
+    color: #f7ead9; padding: 16px 20px 24px;
+  }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .back {
+    display: flex; align-items: center; justify-content: center; min-width: 64px; min-height: 64px;
+    border-radius: 18px; background: #2e2013; color: #f7ead9; text-decoration: none;
+    font-size: 30px; border: 2px solid #4a3520;
+  }
+  h1 { font-size: 40px; margin: 0; flex: 1; }
+  h1 small { display: block; font-size: 18px; font-weight: 400; opacity: .75; }
+  .clock { font-size: 34px; font-weight: 700; }
+  .wx { text-align: right; font-size: 18px; line-height: 1.35; }
+  .wx #temp { font-size: 26px; font-weight: 700; }
+
+  .photo-banner {
+    position: relative; height: 168px; border-radius: 24px; overflow: hidden;
+    border: 2px solid #4a3520; margin-bottom: 16px; background: #241a10;
+  }
+  .slide-container { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
+  .slide-container.active { opacity: 1; }
+  .blur-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(24px) brightness(.6); }
+  .sharp-img { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; }
+  #photo-desc {
+    position: absolute; left: 16px; bottom: 12px; font-size: 18px;
+    background: rgba(0,0,0,.55); padding: 6px 14px; border-radius: 14px;
+  }
+
+  .rooms { display: flex; gap: 14px; margin-bottom: 16px; }
+  .room-card {
+    flex: 1; background: #2e2013; border: 2px solid #4a3520; border-radius: 24px;
+    padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .room-card.wide { flex: 1.35; }
+  .room-card h3 { margin: 0; font-size: 22px; text-align: center; }
+  .bar {
+    position: relative; width: 54px; height: 150px; border-radius: 16px;
+    background: #1c130c; border: 2px solid #4a3520; overflow: hidden; cursor: pointer;
+  }
+  .bar.h { width: 100%; height: 54px; }
+  .fill { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; background: linear-gradient(180deg, #f0a24a, #d96c4f); transition: height .2s; }
+  .bar.h .fill { top: 0; bottom: 0; width: 0%; height: auto; background: linear-gradient(90deg, #f0a24a, #d96c4f); transition: width .2s; }
+  .tline { position: absolute; left: 0; right: 0; height: 4px; background: #fff; border-radius: 2px; opacity: 0; }
+  .tline.visible { opacity: .9; }
+  .bar.h .tline { top: 0; bottom: 0; left: auto; width: 4px; height: auto; }
+  .btnrow { display: flex; align-items: flex-end; gap: 8px; }
+  .btncap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .btncap span { font-size: 16px; opacity: .85; }
+  .ghost-btn {
+    width: 64px; height: 64px; border-radius: 20px; border: 2px solid #f0a24a;
+    background: #3d2a17; color: #f7ead9; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ghost-btn svg { width: 30px; height: 30px; }
+  .ghost-btn:disabled { opacity: .3; border-color: #6b5a44; }
+  .stop {
+    min-width: 64px; min-height: 64px; border-radius: 20px; border: 2px solid #8a6a4a;
+    background: #241a10; color: #f7ead9; font-size: 18px; font-weight: 700; cursor: pointer; padding: 0 12px;
+  }
+  .mini { font-size: 15px; opacity: .8; text-align: center; line-height: 1.4; }
+  .mini b { color: #f0a24a; }
+
+  .tv-card {
+    background: #2e2013; border: 2px solid #4a3520; border-radius: 24px;
+    padding: 14px 20px; display: flex; align-items: center; gap: 16px;
+  }
+  .tv-card h3 { margin: 0; font-size: 24px; }
+  #tv-status-text { font-size: 18px; opacity: .8; flex: 1; }
+  .tvbtn {
+    min-width: 64px; min-height: 64px; border-radius: 20px; cursor: pointer;
+    border: 2px solid #f0a24a; background: #3d2a17; color: #f7ead9;
+    font-size: 18px; font-weight: 700; padding: 0 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tvbtn svg { width: 26px; height: 26px; }
+  #tv-power-btn.online { background: #2e6b34; border-color: #4caf50; }
+  #tv-mute-btn.muted { background: #7a1f1f; border-color: #e05252; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="index.html?sim" aria-label="Back to designs">&#8249;</a>
+  <h1>Casita <small>Design A &middot; warm and friendly</small></h1>
+  <div class="wx"><span id="temp">--</span><br><span id="weather-desc">...</span></div>
+  <div class="clock" id="widget-clock">--:--</div>
+</header>
+
+<div class="photo-banner">
+  <div id="slide-1" class="slide-container active"><div id="blur-1" class="blur-bg"></div><div id="sharp-1" class="sharp-img"></div></div>
+  <div id="slide-2" class="slide-container"><div id="blur-2" class="blur-bg"></div><div id="sharp-2" class="sharp-img"></div></div>
+  <div id="photo-desc">...</div>
+</div>
+
+<div class="rooms">
+  <div class="room-column room-card" data-room="kid">
+    <h3>Kid's Room</h3>
+    <div class="bar" onclick="App.seek(event,'kid')">
+      <div id="prog-kid" class="fill"></div><div id="target-kid" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('kid','Open')" aria-label="Open"></button><span>Open</span></div>
+      <button class="stop" onclick="App.cover('kid','Stop')">Stop</button>
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('kid','Close')" aria-label="Close"></button><span>Close</span></div>
+    </div>
+  </div>
+
+  <div class="room-column room-card" data-room="master">
+    <h3>Master Bedroom</h3>
+    <div class="bar" onclick="App.seek(event,'master')">
+      <div id="prog-master" class="fill"></div><div id="target-master" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('master','Open')" aria-label="Open"></button><span>Open</span></div>
+      <button class="stop" onclick="App.cover('master','Stop')">Stop</button>
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('master','Close')" aria-label="Close"></button><span>Close</span></div>
+    </div>
+  </div>
+
+  <div class="room-column room-card" data-room="tv_area">
+    <h3>TV Area</h3>
+    <div class="bar" onclick="App.seek(event,'tv_area')">
+      <div id="prog-tv_area" class="fill"></div><div id="target-tv_area" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('tv_area','Open')" aria-label="Open"></button><span>Open</span></div>
+      <button class="stop" onclick="App.cover('tv_area','Stop')">Stop</button>
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('tv_area','Close')" aria-label="Close"></button><span>Close</span></div>
+    </div>
+  </div>
+
+  <div class="room-column room-card" data-room="sofa">
+    <h3>Sofa</h3>
+    <div class="bar" onclick="App.seek(event,'sofa')">
+      <div id="prog-sofa" class="fill"></div><div id="target-sofa" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('sofa','Open')" aria-label="Open"></button><span>Open</span></div>
+      <button class="stop" onclick="App.cover('sofa','Stop')">Stop</button>
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('sofa','Close')" aria-label="Close"></button><span>Close</span></div>
+    </div>
+  </div>
+
+  <div class="room-column room-card wide" data-room="awning">
+    <h3>Patio Awning</h3>
+    <div class="bar h" onclick="App.seek(event,'awning',true)">
+      <div id="prog-awning" class="fill"></div><div id="target-awning" class="tline"></div>
+    </div>
+    <div class="btnrow">
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('awning','Close')" aria-label="In"></button><span>In</span></div>
+      <button class="stop" onclick="App.cover('awning','Stop')">Stop</button>
+      <div class="btncap"><button class="ghost-btn" onclick="App.cover('awning','Open')" aria-label="Out"></button><span>Out</span></div>
+    </div>
+    <div class="mini"><b id="awning-status">...</b><br><span id="sun-intel"></span></div>
+  </div>
+</div>
+
+<div class="tv-card">
+  <h3>TV</h3>
+  <span id="tv-status-text">...</span>
+  <button id="tv-mute-btn" class="tvbtn" onclick="App.tv('audio','setAudioMute',{})">Mute</button>
+  <button id="tv-power-btn" class="tvbtn" onclick="App.tv('system','setPowerStatus',{status:!this.classList.contains('online')})">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+    <span>Power</span>
+  </button>
+</div>
+
+<!-- Required by App.init (hidden) -->
+<div style="display:none" aria-hidden="true">
+  <div id="control-drawer"></div><div id="debug-log"></div>
+  <div id="super-widget"></div>
+</div>
+
+<script src="photos_data.js"></script>
+<script src="app_v89.js"></script>
+<script>window.__KIOSK_BUILD="__KIOSK_BUILD__";</script>
+<script src="updater.js"></script>
+</body>
+</html>
