@@ -407,8 +407,6 @@
 </div>
 <script src="photos_data.js"></script>
 <script src="app_v89.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
 (function () {
   "use strict";
@@ -597,20 +595,27 @@
 })();
 </script>
 <script>
-/* ---- Magic hands on the main screen: swipe = curtains, palm = next photo ----
-   Swipe direction is measured in the USER's perspective: the front camera is
-   mirrored (x' = 1 - x), so a left→right sweep like drawing a curtain reads as
-   x' traveling from the left third to the right third of the frame. */
+/* ---- Motion gestures: no pose, no Jedi hands — just move. ----
+   Wave (back-and-forth) = next photo. Sweep across = curtains.
+   Pure frame-differencing on a tiny canvas: no ML model, no CDN,
+   runs fine on the 2GB tablet, and you don't need to know where
+   the camera is — any movement in front of the tablet counts. */
 (function () {
   "use strict";
 
-  var HOLD_MS = 650;       // palm hold time for next photo (snappy)
-  var COOLDOWN_MS = 2200;  // pause between photo changes
-  var SWIPE_DIST = 0.20;   // frame-fraction the palm must travel (forgiving)
-  var SWIPE_GRACE_MS = 700;// tracking dropouts tolerated mid-sweep (motion blur)
-  var HOLD_STILL = 0.08;   // max drift while "holding" (else it is a sweep)
-  var SWIPE_MAX_MS = 2600; // slowest allowed sweep
-  var SWIPE_MIN_MS = 90;   // fastest allowed swipe (noise guard)
+  var MW = 160, MH = 120;        // analysis resolution (tiny = fast)
+  var SAMPLE_MS = 100;           // frame sample rate
+  var PIXEL_TH = 26;             // brightness delta counts as "moved"
+  var MOTION_RATIO = 0.012;      // fraction of frame changed = presence
+  var TRAIL_MS = 2200;           // motion trail window
+  var SWEEP_DIST = 0.30;         // centroid travel for a sweep
+  var SWEEP_MIN_MS = 250;
+  var SWEEP_CONFIRM_MS = 350;    // wait to rule out a wave before firing
+  var WAVE_LEG = 0.07;           // min leg length for a wave turn
+  var WAVE_TURNS = 2;            // direction reversals = wave = next photo
+  var COOLDOWN_MS = 2200;        // pause between photo changes
+  var lockUntil = 0;
+  var cooldownUntil = 0;
 
   var pill = document.getElementById("fallback-pill");
   var dot = document.getElementById("hand-dot");
@@ -621,22 +626,15 @@
     return !!(o && o.classList.contains("open"));
   }
 
-  /* ---- Gesture coach (Sony-style): contextual hints on the bottom edge ----
-     Hand seen      -> "show your palm, I'm listening"
-     Palm recognized-> "ready": sweep right = controls, hold = next photo
-     First run      -> animated sweep demo until the first successful swipe   */
-  var coachEl = null, coachText = null, coachHand = null, coachTimer = 0;
+  /* ---- Gesture coach: contextual hints on the bottom edge ---- */
+  var coachEl = null, coachText = null, coachTimer = 0;
   var coachSeenDemo = false;
   try { coachSeenDemo = !!localStorage.getItem("casita_coach_seen"); } catch (e) {}
-  function coachInit() {
+  function showCoach(text, ms, demo) {
     if (!coachEl) {
       coachEl = document.getElementById("coach");
       coachText = document.getElementById("coach-text");
-      coachHand = document.getElementById("coach-hand");
     }
-  }
-  function showCoach(text, ms, demo) {
-    coachInit();
     if (!coachEl) return;
     coachText.textContent = text;
     coachEl.classList.toggle("demo", !!demo);
@@ -645,7 +643,6 @@
     if (ms) coachTimer = setTimeout(hideCoach, ms);
   }
   function hideCoach() {
-    coachInit();
     if (coachTimer) { clearTimeout(coachTimer); coachTimer = 0; }
     if (coachEl) coachEl.classList.remove("show", "demo");
   }
@@ -655,7 +652,7 @@
     try { localStorage.setItem("casita_coach_seen", "1"); } catch (e) {}
     hideCoach();
   }
-  var lastSeeHint = 0;
+  var lastPresenceHint = 0;
 
   var handStatus = null;
   function setHandStatus(t) {
@@ -663,137 +660,103 @@
     if (handStatus) handStatus.textContent = t;
   }
   function gestureUnavailable() {
-    // Real fallback, not a test button: tap reveals the controls.
     if (pill) pill.classList.add("show");
     if (dot) dot.style.display = "none";
     setHandStatus("camera unavailable");
   }
-
-  function isOverlayOpen() {
-    var o = document.getElementById("overlay");
-    return !!(o && o.classList.contains("open"));
-  }
-
-  // Open palm = 4 fingers extended + thumb out (image coords: y grows downward)
-  function isOpenPalm(lm) {
-    try {
-      var fingers = [[8, 6], [12, 10], [16, 14], [20, 18]];
-      for (var i = 0; i < fingers.length; i++) {
-        if (lm[fingers[i][0]].y > lm[fingers[i][1]].y) return false;
-      }
-      var d = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); };
-      if (d(lm[4], lm[0]) < d(lm[3], lm[0]) * 1.15) return false;
-      return true;
-    } catch (e) { return false; }
-  }
-
-  var palmSince = 0;
-  var cooldownUntil = 0;
-  var swipeX = null, swipeT = 0, lastHandT = 0;
-  var sweepEncouraged = false;
-  var lockUntil = 0;
-  var lastToggleT = 0;
-  var noPalmSince = 0, lastStepBackHint = 0;
-  var SWIPE_DIST_ANY = 0.28; // deliberate sweep needed for a non-palm close
-  var SWIPE_MIN_ANY_MS = 600;
-  var CLOSE_FUMBLE_MS = 3000; // ignore non-palm sweeps right after opening
-
-  function resetSwipe() { swipeX = null; sweepEncouraged = false; }
-
-  function palmFlash() {
+  function gestureFlash() {
     if (!flash) return;
     flash.classList.add("show");
     setTimeout(function () { flash.classList.remove("show"); }, 1100);
   }
 
-  var palmWas = false;
-  function onHand(lm) {
-    var now = Date.now();
+  /* ---- motion core ---- */
+  var prev = null, hasPrev = false;
+  var trail = [];        // {t, x} centroid trail
+  var sweepArmed = 0;
+
+  function sampleMotion(ctx) {
+    var data = ctx.getImageData(0, 0, MW, MH).data;
+    var n = MW * MH, motion = 0, sx = 0, i, v, d;
+    if (!prev) prev = new Uint8Array(n);
+    for (i = 0; i < n; i++) {
+      v = data[i * 4];
+      if (hasPrev) {
+        d = v - prev[i];
+        if (d > PIXEL_TH || d < -PIXEL_TH) { motion++; sx += i % MW; }
+      }
+      prev[i] = v;
+    }
+    hasPrev = true;
+    if (motion < 8 || motion / n < MOTION_RATIO) return null;
+    return { x: (sx / motion) / MW };
+  }
+
+  function analyzeTrail() {
+    // returns turns (significant reversals), net displacement, span
+    var turns = 0, dir = 0, legStart = null, i, dx, s, leg;
+    for (i = 1; i < trail.length; i++) {
+      dx = trail[i].x - trail[i - 1].x;
+      if (dx > -0.015 && dx < 0.015) continue;
+      s = dx > 0 ? 1 : -1;
+      if (legStart === null) { legStart = trail[i - 1].x; dir = s; }
+      else if (s !== dir) {
+        leg = Math.abs(trail[i - 1].x - legStart);
+        if (leg >= WAVE_LEG) turns++;
+        legStart = trail[i - 1].x; dir = s;
+      }
+    }
+    var n = trail.length;
+    return {
+      turns: turns,
+      disp: n >= 2 ? trail[n - 1].x - trail[0].x : 0,
+      dt: n >= 2 ? trail[n - 1].t - trail[0].t : 0
+    };
+  }
+
+  function onMotion(m, now) {
     if (dot) dot.classList.add("seen");
-    setHandStatus("hand seen");
-    if (!palmWas && now - lastSeeHint > 30000) {
-      lastSeeHint = now;
-      showCoach("show your palm — I'm listening", 2600, false);
+    setHandStatus("motion seen");
+    if (now - lastPresenceHint > 30000) {
+      lastPresenceHint = now;
+      showCoach("I see you \u2014 wave for next photo \u00b7 sweep for controls", 3200, false);
     }
+    trail.push({ t: now, x: m.x });
+    while (trail.length && now - trail[0].t > TRAIL_MS) trail.shift();
 
-    // --- sweep & hold ---
-    // OPEN the curtains needs an open palm (no accidental opens).
-    // CLOSE accepts any tracked hand: when you step up to the controls you are
-    // too close for a clean palm read, so a deliberate hand sweep still works.
-    var palmNow = isOpenPalm(lm);
-    var isOpen = overlayOpen();
-    if (palmNow && !palmWas) {
-      showCoach(isOpen ? "ready! hold still = next photo \u00b7 sweep across = close"
-                       : "ready! sweep across = controls \u00b7 hold still = next photo", 3200, false);
+    var a = analyzeTrail();
+    if (a.turns >= WAVE_TURNS) {
+      trail = []; sweepArmed = 0;
+      if (now >= cooldownUntil) {
+        cooldownUntil = now + COOLDOWN_MS;
+        gestureFlash();
+        try { if (typeof App !== "undefined" && App.nextSlide) App.nextSlide(); } catch (e) {}
+        showCoach("next photo", 1200, false);
+      }
+      return;
     }
-    palmWas = palmNow;
-
-    // step-back hint: a hand is there but no readable palm while controls are open
-    if (isOpen && !palmNow) {
-      if (!noPalmSince) noPalmSince = now;
-      if (now - noPalmSince > 2500 && now - lastStepBackHint > 15000) {
-        lastStepBackHint = now;
-        showCoach("step back so I can see your whole hand", 3000, false);
+    var adisp = Math.abs(a.disp);
+    if (a.turns === 0 && adisp >= SWEEP_DIST && a.dt >= SWEEP_MIN_MS) {
+      if (!sweepArmed) { sweepArmed = now; return; }
+      if (now - sweepArmed >= SWEEP_CONFIRM_MS && now >= lockUntil) {
+        sweepArmed = 0;
+        var opening = !overlayOpen();
+        window.toggleOverlay(); lockUntil = now + 800; trail = []; markDemoSeen();
+        showCoach(opening ? "controls open \u2014 sweep to close" : "controls closed", 2400, false);
       }
     } else {
-      noPalmSince = 0;
-    }
-
-    var canSweep = palmNow || isOpen;
-    if (canSweep) {
-      lastHandT = now;
-      try {
-        var x = 1 - lm[9].x; // lm[9]: middle-finger base, stable hand center
-        if (swipeX === null) { swipeX = x; swipeT = now; }
-        var dx = x - swipeX, dt = now - swipeT, adx = Math.abs(dx);
-        var need = palmNow ? SWIPE_DIST : SWIPE_DIST_ANY;
-        var minDt = palmNow ? SWIPE_MIN_MS : SWIPE_MIN_ANY_MS;
-        if (dt > SWIPE_MAX_MS) { swipeX = x; swipeT = now; palmSince = 0; }
-        else if (!palmNow && isOpen && now - lastToggleT < CLOSE_FUMBLE_MS) {
-          swipeX = x; swipeT = now; // fresh anchor, ignore fumbles right after opening
-        }
-        else if (adx >= need && dt >= minDt && now >= lockUntil) {
-          var opening = !isOpen;
-          window.toggleOverlay(); lockUntil = now + 800; lastToggleT = now;
-          resetSwipe(); palmSince = 0; markDemoSeen(); noPalmSince = 0;
-          showCoach(opening ? "controls open \u2014 sweep across to close" : "controls closed", 2400, false);
-        }
-        else if (palmNow && adx >= SWIPE_DIST * 0.55 && !sweepEncouraged) {
-          sweepEncouraged = true;
-          showCoach("keep going \u2014 sweep across", 1500, false);
-        }
-        else if (palmNow && adx < HOLD_STILL) {
-          if (!palmSince) palmSince = now;
-          if (now - palmSince >= HOLD_MS && now >= cooldownUntil) {
-            cooldownUntil = now + COOLDOWN_MS;
-            palmSince = 0; resetSwipe();
-            palmFlash();
-            try { if (typeof App !== "undefined" && App.nextSlide) App.nextSlide(); } catch (e) {}
-          }
-        } else {
-          palmSince = 0; // moving (or non-palm) hand: sweeping, not holding
-        }
-      } catch (e) { resetSwipe(); palmSince = 0; }
-    } else {
-      palmSince = 0;
-      resetSwipe();
+      if (!sweepArmed || now - sweepArmed > 1500) sweepArmed = 0;
     }
   }
 
-  function onNoHand() {
+  function onStill(now) {
     if (dot) dot.classList.remove("seen");
-    setHandStatus("show your hand");
-    palmWas = false;
-    palmSince = 0;
-    if (swipeX !== null && Date.now() - lastHandT > SWIPE_GRACE_MS) resetSwipe();
-    palmSince = 0;
-    resetSwipe();
+    setHandStatus("move your hand in front of the tablet");
+    if (sweepArmed && now - sweepArmed > 1500) sweepArmed = 0;
   }
 
   async function boot() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return gestureUnavailable();
-    if (typeof Hands === "undefined") return gestureUnavailable();
-
     var stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -810,44 +773,34 @@
     var playOk = true;
     try { await video.play(); } catch (e) { playOk = false; }
     if (!playOk) {
-      // Autoplay blocked: retry on the first tap anywhere.
       var retryPlay = function () {
-        video.play().then(function () { setHandStatus("show your hand"); },
+        video.play().then(function () { setHandStatus("move your hand in front of the tablet"); },
                           function () {});
         document.removeEventListener("pointerdown", retryPlay);
       };
       document.addEventListener("pointerdown", retryPlay);
       setHandStatus("tap once to start camera");
     } else {
-      setHandStatus("show your hand");
+      setHandStatus("move your hand in front of the tablet");
     }
 
-    var hands;
-    try {
-      hands = new Hands({ locateFile: function (f) { return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + f; } });
-      hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
-    } catch (e) { return gestureUnavailable(); }
+    var canvas = document.createElement("canvas");
+    canvas.width = MW; canvas.height = MH;
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-    var busy = false;
-    hands.onResults(function (res) {
-      var list = res && res.multiHandLandmarks;
-      if (list && list[0]) onHand(list[0]); else onNoHand();
-    });
-
-    async function loop() {
-      try {
-        if (!busy && video.readyState >= 2) {
-          busy = true;
-          try { await hands.send({ image: video }); } catch (e) {}
-          busy = false;
-        }
-      } catch (e) { busy = false; }
-      requestAnimationFrame(loop);
-    }
-    loop();
     if (!coachSeenDemo) {
-      setTimeout(function () { showCoach("flat hand, sweep across — opens the controls", 0, true); }, 2500);
+      setTimeout(function () { showCoach("wave or sweep in front of the tablet \u2014 no need to touch", 0, true); }, 2500);
     }
+    setInterval(function () {
+      try {
+        if (video.readyState < 2) return;
+        var now = Date.now();
+        ctx.drawImage(video, 0, 0, MW, MH);
+        var m = sampleMotion(ctx);
+        while (trail.length && now - trail[0].t > TRAIL_MS) trail.shift();
+        if (m) onMotion(m, now); else onStill(now);
+      } catch (e) { /* keep the frame loop alive */ }
+    }, SAMPLE_MS);
   }
 
   if (document.readyState === "loading") {
