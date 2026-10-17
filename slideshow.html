@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiosk Slideshow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+  #slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #slide img { max-width: 100%; max-height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.2s; }
+  #slide img.visible { opacity: 1; }
+  #caption { position: absolute; bottom: 20px; left: 30px; color: #fff; font-size: 24px; font-family: system-ui; text-shadow: 2px 2px 4px #000; opacity: 0.9; }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #666; font-family: system-ui; font-size: 20px; }
+</style>
+</head>
+<body>
+<div id="loading">Loading photos…</div>
+<div id="slide"><img id="img1"><img id="img2" style="position:absolute"></div>
+<div id="caption"></div>
+<script>
+const SHARE_KEY = '0ld4rYH5ar4rydMNVSIpsR0CIUw6Pnx9oHpHZ3vvqAIpzsbcZFoC-Ahttmra6bMmvBs';
+const IMMICH_URL = 'http://152.70.19.2:2283';
+const INTERVAL = 15000;
+
+let photos = [];
+let current = 0;
+let showingFirst = true;
+
+async function loadPhotos() {
+  try {
+    // Get shared link info
+    const res = await fetch(`${IMMICH_URL}/api/shared-links/me?key=${SHARE_KEY}`, {
+      headers: { 'x-api-key': SHARE_KEY }
+    });
+    // Public share links use a different auth - try without header
+    const res2 = await fetch(`${IMMICH_URL}/api/shared-links/me?key=${SHARE_KEY}`);
+    const data = await res2.json();
+    const assets = data.assets || [];
+    photos = assets.map(a => ({
+      url: `${IMMICH_URL}/api/assets/${a.id}/thumbnail?size=preview&key=${SHARE_KEY}`,
+      date: a.fileCreatedAt
+    }));
+    // Shuffle
+    for (let i = photos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [photos[i], photos[j]] = [photos[j], photos[i]];
+    }
+    document.getElementById('loading').style.display = 'none';
+    if (photos.length > 0) showPhoto(0);
+  } catch (e) {
+    document.getElementById('loading').textContent = 'Failed to load photos';
+    console.error(e);
+  }
+}
+
+function showPhoto(index) {
+  current = index % photos.length;
+  const photo = photos[current];
+  const showEl = showingFirst ? document.getElementById('img1') : document.getElementById('img2');
+  const hideEl = showingFirst ? document.getElementById('img2') : document.getElementById('img1');
+  
+  showEl.onload = () => {
+    showEl.classList.add('visible');
+    hideEl.classList.remove('visible');
+    showingFirst = !showingFirst;
+  };
+  showEl.src = photo.url;
+  
+  const caption = document.getElementById('caption');
+  if (photo.date) {
+    const d = new Date(photo.date);
+    caption.textContent = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+}
+
+setInterval(() => {
+  if (photos.length > 0) showPhoto(current + 1);
+}, INTERVAL);
+
+// Tap to advance
+document.body.addEventListener('click', () => {
+  if (photos.length > 0) showPhoto(current + 1);
+});
+
+loadPhotos();
+</script>
+</body>
+</html>
