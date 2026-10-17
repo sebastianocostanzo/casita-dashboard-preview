@@ -15,7 +15,7 @@
     :host {
       display: block;
       font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-      color: #fff;
+      color: var(--primary-text-color, #fff);
       text-align: center;
       user-select: none;
     }
@@ -280,7 +280,7 @@
   `,l([p({attribute:"device-id"})],$.prototype,"deviceId",2),l([m()],$.prototype,"_position",2),l([m()],$.prototype,"_online",2),l([m()],$.prototype,"_busy",2);customElements.define("kiosk-awning",$);var ct=class extends ${constructor(){super(...arguments);this._hassBus=null}setConfig(e){if(!e||!e.entity)throw new Error("ha-awning-card: config must include entity");this._config=e,this.deviceId="awning",this._hassBus=new X({backend:"hass",hassUrl:e.hass_url,hassToken:e.hass_token,deviceToEntity:{awning:e.entity},logFn:()=>{}}),this.bus=this._hassBus}set hass(e){}getCardSize(){return 2}static getStubConfig(){return{entity:"cover.patio_awning"}}disconnectedCallback(){super.disconnectedCallback(),this._hassBus?.disconnectHass()}};customElements.define("ha-awning-card",ct);var R=class extends g{constructor(){super(...arguments);this._now=new Date;this._taps=[]}connectedCallback(){super.connectedCallback(),this._timer=setInterval(()=>{this._now=new Date},1e3)}disconnectedCallback(){this._timer&&clearInterval(this._timer),this._timer=void 0,super.disconnectedCallback()}_tap(){let e=Date.now();this._taps=this._taps.filter(i=>e-i<2e3),this._taps.push(e),this._taps.length>=5&&(this._taps=[],this.dispatchEvent(new CustomEvent("admin-request",{bubbles:!0,composed:!0})))}render(){let e=this._now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});return f`<div class="clock" @click=${()=>this._tap()}>${e}</div>`}};R.styles=b`
     :host { display: block; }
     .clock {
-      font-size: 52px; font-weight: 800; color: #fff; text-align: center;
+      font-size: 52px; font-weight: 800; color: var(--primary-text-color, #fff); text-align: center;
       font-variant-numeric: tabular-nums; user-select: none; cursor: default;
     }
   `,l([m()],R.prototype,"_now",2);customElements.define("kiosk-clock",R);var ht=class extends R{constructor(){super()}setConfig(t){}getCardSize(){return 1}static getStubConfig(){return{}}};customElements.define("ha-clock-card",ht);})();
