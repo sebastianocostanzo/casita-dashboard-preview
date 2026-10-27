@@ -1,4 +1,4 @@
-/* casita-stream v1 — Casita v4 stream-to-TV helper.
+/* casita-stream v1.1 — Casita v4 stream-to-TV helper.
  * Only acts on the casita-v4 dashboard, and only inside Fully Kiosk.
  * - Entering /casita-v4/stream opens the tablet's Cast control (Google Home)
  *   once, so the user picks the Sony TV once. Mirroring then shows the
@@ -46,6 +46,18 @@
         }
       } catch (e) {}
     }
+
+    // Stream mode must NOT auto-return to Album after 60s idle (casita-idle-return).
+    // Watching a slideshow is idle by design, so while on the stream view,
+    // re-arm the idle timer every 30s with synthetic activity events.
+    setInterval(function () {
+      try {
+        if (onStream()) {
+          window.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+          window.dispatchEvent(new Event('touchstart', { bubbles: true }));
+        }
+      } catch (e) {}
+    }, 30000);
     document.addEventListener('casita-stop-cast', function () { try { openCastControl(); } catch (e) {} }, true);
     window.addEventListener('casita-stop-cast', function () { try { openCastControl(); } catch (e) {} }, true);
     window.addEventListener('popstate', function () { setTimeout(check, 300); });
