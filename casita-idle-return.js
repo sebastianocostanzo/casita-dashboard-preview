@@ -1,21 +1,29 @@
-/* casita-idle-return v1 — Casita v4 idle return to Album.
+/* casita-idle-return v2 — dashboard-agnostic idle return to the dashboard root.
  *
  * After 60 seconds without a touch, key press or scroll, a tablet
- * viewing casita-v4 on any view other than the first (Album) is
- * switched back to Album, in-page (no reload, so no photo re-download).
- * - Only acts on the casita-v4 dashboard; a harmless no-op elsewhere
- *   (Lovelace resources load on every dashboard).
- * - Deliberately NO dialog guard (removed after the 2026-10-26 test):
- *   the real more-info dialog was not detected by a shadow-tree walk
- *   for ha-dialog, and more importantly the test showed the dialog
- *   SURVIVES a view change (it lives at app level, above the views):
- *   after 60 s idle with the Master Bedroom dialog open, the background
- *   returned to Album while the dialog stayed put. That is the desired
- *   kiosk behaviour — a forgotten open dialog must not block the return
- *   forever. Closing the dialog then reveals Album.
+ * viewing any view other than the first view of its CURRENT dashboard
+ * is switched back to that dashboard's root (Album on the Casita
+ * dashboards), in-page (no reload, so no photo re-download).
+ *
+ * v2 change vs v1 (issue #36): v1 hardcoded DASHBOARD = 'casita-v4' and
+ * did nothing anywhere else, so on the test dashboard
+ * (casita-unified-test) it silently never returned — diagnosed
+ * 2026-10-28, not a tablet fault, just v1 scope. v2 derives the
+ * dashboard from the live URL at fire time: the first path segment.
+ * It NEVER hardcodes a dashboard name, so it cannot send the test
+ * tablet to the production dashboard or stop working if production
+ * ever moves to the unified dashboard name.
+ * - Behaviour on casita-v4 is identical to v1 (root is /casita-v4).
+ * - Deliberately NO dialog guard (kept from v1, proven 2026-10-26):
+ *   the dialog lives at app level, above the views, and SURVIVES a
+ *   view change — a forgotten open dialog must not block the return
+ *   forever. Closing the dialog then reveals the root view.
  * - Any user activity re-arms the timer; arriving on a view (tap or
  *   navigation) also re-arms it.
  * - Idempotent: safe if loaded twice.
+ * - Lovelace resources load on every dashboard, so this script is
+ *   present on all of them; returning to the current dashboard's root
+ *   is harmless on non-Casita dashboards too.
  */
 (function () {
   'use strict';
@@ -23,7 +31,6 @@
     if (window.__casitaIdleReturnInstalled) return;
     window.__casitaIdleReturnInstalled = true;
     var IDLE_MS = 60000;
-    var DASHBOARD = 'casita-v4';
     var timer = null;
 
     function pathParts() {
@@ -31,26 +38,27 @@
         return window.location.pathname.split('/').filter(function (p) { return p.length > 0; });
       } catch (e) { return []; }
     }
-    function onDashboard() {
+    function dashboardRoot() {
       var p = pathParts();
-      return p.length > 0 && p[0] === DASHBOARD;
+      return p.length > 0 ? '/' + p[0] : null;
     }
     function onFirstView() {
       return pathParts().length <= 1;
     }
-    function goAlbum() {
+    function goRoot() {
       try {
-        if (!onDashboard() || onFirstView()) return;
-        window.history.pushState(null, '', '/' + DASHBOARD);
+        var root = dashboardRoot();
+        if (!root || onFirstView()) return;
+        window.history.pushState(null, '', root);
         window.dispatchEvent(new CustomEvent('location-changed'));
       } catch (e) {
-        // Fallback: a full load of the dashboard root still lands on Album.
-        try { window.location.href = '/' + DASHBOARD; } catch (e2) {}
+        // Fallback: a full load of the dashboard root still lands on the first view.
+        try { var r = dashboardRoot(); if (r) window.location.href = r; } catch (e2) {}
       }
     }
     function arm() {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(goAlbum, IDLE_MS);
+      timer = setTimeout(goRoot, IDLE_MS);
     }
     ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'wheel'].forEach(function (ev) {
       window.addEventListener(ev, arm, { capture: true, passive: true });
