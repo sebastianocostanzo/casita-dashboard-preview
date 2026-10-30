@@ -1,32 +1,23 @@
-/* casita-tv-auto-start.js v2 — TEST ONLY (issue #41, rail Sony speed work).
+/* casita-tv-auto-start.js v3 — PROD + TEST (issue #41, rail Sony speed work).
  *
  * Why: Home Assistant's Fully Kiosk integration polls the tablet every
  * 30 s, so the page-sensor automation can take up to 30 s to learn that
  * the TV view opened. This script runs IN the dashboard (already
  * authenticated in Fully) and fires the moment the TV view loads,
- * cutting the wait to the Sony's own boot time (~a few seconds).
+ * cutting the wait to the Sony's own boot time (~3 s, proven on test).
  *
- * v2 change vs v1: v1 read the Sony and flag states from hass.states,
- * but on this frontend hass.states is undefined from a global script,
- * so v1 never fired (proven by probe: hass present, callService present,
- * states undefined; a direct in-page callService DID power the Sony on).
- * v2 reads the flag through same-origin REST with the frontend's own
- * token from localStorage, and skips the Sony state check entirely:
- * turn_on is idempotent (harmless when already on, a no-op when
- * unreachable), so no Sony-state gate is needed.
- *
- * Scope guards (both must hold, or it does nothing):
- *  1. The dashboard path must be the TEST dashboard's TV view
- *     (/casita-unified-test/tv). On prod (/casita-v4/...) and every other
- *     dashboard it is a deliberate no-op, even though Lovelace resources
- *     load globally.
- *  2. input_boolean.tv_autostart_test must be ON. It is OFF by default,
- *     so suite runs (which tap the TV view) never fire it. Enable it only
- *     for a live auto-start test, disable it right after.
- * One call per TV visit: after firing, it waits until the path leaves the
- * TV view before it can fire again, so the 500 ms tick cannot spam calls.
- * The Fully page-sensor automation stays as a fallback; its own
- * off-condition makes a second fire harmless.
+ * v3 change vs v2: dual path gate. The resource loads globally, so one
+ * file serves both dashboards:
+ *  - TEST dashboard TV view (/casita-unified-test/tv): fires only when
+ *    input_boolean.tv_autostart_test is ON (read via same-origin REST;
+ *    hass.states is undefined from a global script on this frontend).
+ *    OFF by default, so suite runs never fire it.
+ *  - PROD dashboard TV view (/casita-v4/tv): fires unconditionally,
+ *    because on prod opening the TV view IS the "I want to watch" signal.
+ * turn_on is idempotent (harmless when already on, a no-op when the
+ * Sony is unreachable), so no Sony-state gate is needed on either path.
+ * One call per TV visit on each path. The Fully page-sensor automation
+ * stays as a fallback; its own off-condition makes a second fire harmless.
  * Idempotent: safe if loaded twice.
  */
 (function () {
@@ -45,9 +36,12 @@
         return window.location.pathname.split('/').filter(function (p) { return p.length > 0; });
       } catch (e) { return []; }
     }
-    function onTestTv() {
+    function tvPath() {
       var p = pathParts();
-      return p.length >= 2 && p[0] === 'casita-unified-test' && p[1] === 'tv';
+      if (p.length < 2 || p[1] !== 'tv') return null;
+      if (p[0] === 'casita-unified-test') return 'test';
+      if (p[0] === 'casita-v4') return 'prod';
+      return null;
     }
     function getHass() {
       try {
@@ -66,16 +60,27 @@
         return parsed.access_token || null;
       } catch (e) { return null; }
     }
+    function fire(hass) {
+      fired = true;
+      try {
+        console.log('[casita-tv-auto-start] TV view opened — calling turn_on');
+        hass.callService('media_player', 'turn_on', { entity_id: SONY });
+      } catch (e) {
+        console.log('[casita-tv-auto-start] callService failed: ' + e);
+        fired = false;
+      }
+    }
     function tick() {
       try {
-        if (!onTestTv()) { fired = false; flagFetching = false; return; }
+        var kind = tvPath();
+        if (!kind) { fired = false; flagFetching = false; return; }
         if (fired) return;
         var hass = getHass();
         if (!hass || typeof hass.callService !== 'function') return;
-        // Flag gate via same-origin REST (hass.states is undefined from a
-        // global script on this frontend — proven by probe). Fail safe:
-        // no token or a failed fetch means no fire. Rechecked every 2 s
-        // so turning the flag on while already on the TV view still fires.
+        if (kind === 'prod') { fire(hass); return; }
+        // Test path: flag gate via same-origin REST. Fail safe: no token
+        // or a failed fetch means no fire. Rechecked every 2 s so turning
+        // the flag on while already on the TV view still fires.
         var now = Date.now();
         if (flagFetching || now < flagNextCheck) return;
         var token = getToken();
@@ -85,18 +90,8 @@
           .then(function (r) { return r.json(); })
           .then(function (s) {
             flagFetching = false;
-            if (s && s.state === 'on') {
-              fired = true;
-              try {
-                console.log('[casita-tv-auto-start] TV view opened, flag on — calling turn_on');
-                hass.callService('media_player', 'turn_on', { entity_id: SONY });
-              } catch (e) {
-                console.log('[casita-tv-auto-start] callService failed: ' + e);
-                fired = false;
-              }
-            } else {
-              flagNextCheck = Date.now() + 2000;
-            }
+            if (s && s.state === 'on') { fire(hass); }
+            else { flagNextCheck = Date.now() + 2000; }
           })
           .catch(function () { flagFetching = false; flagNextCheck = Date.now() + 2000; });
       } catch (e) {}
