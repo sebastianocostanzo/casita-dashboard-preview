@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light" />
 <link rel="icon" href="data:," />
-<title>House Alerts Tile Mockup — v4</title>
+<title>House Alerts Tile Mockup — v4.3</title>
 <style>
   /* ---- Mockup page chrome (not the tablet) ---- */
   :root{
@@ -143,7 +143,7 @@
 <header class="top">
   <div class="wrap">
     <div class="badges">
-      <span class="badge design">Design only — Mockup v4</span>
+      <span class="badge design">Design only — Mockup v4.3</span>
       <span class="badge">Issue #48 · House Alerts</span>
       <span class="badge prop">Values marked “proposed” are not decisions</span>
     </div>
@@ -236,7 +236,7 @@
   <!-- STORAGE BOUNDS -->
   <section class="block" aria-labelledby="store-h">
     <h2 id="store-h">5 — Storage bounds: the worked arithmetic</h2>
-    <p class="section-lede">The two <code>input_text</code> helpers are bounded by construction against the verified 255-character entity-state limit (HA docs). The v3 draft stated the dispatch-log worst case as 237 characters — that was a miscount, corrected here. Both bounds below are reproducible from the format definitions.</p>
+    <p class="section-lede">The two <code>input_text</code> helpers are bounded by construction against the verified 255-character entity-state limit (HA docs). <strong>Both helpers must be created with <code>max: 255</code> — the HA default is <code>max: 100</code>, and both bounds (139 and 211 chars) exceed it.</strong> <code>initial</code> is left unset so the state restores across restarts (HA docs). Exact definitions are in design draft §4.3. The v3 draft stated the dispatch-log worst case as 237 characters — that was a miscount, corrected here. Both bounds below are reproducible from the format definitions.</p>
     <div class="panel">
       <h3>Schedule snapshot — <code>input_text.alerts_schedule_snapshot</code></h3>
       <p class="who">Format: comma-separated <code>MMDD&lt;code&gt;</code> pairs, oldest first. Longest entry <code>MMDDzmieszane</code> = 4 + 9 = <strong>13 chars</strong>. Cap: 10 entries.</p>
@@ -254,7 +254,7 @@ garbage-20261116-bio-metale-papier-szklo-zmieszane:U,garbage-20261117-bio-metale
 Realistic mixed example (105 chars):
 garbage-20261109-metale-zmieszane:U,garbage-20261112-bio:S,garbage-20261116-metale:S,
 youtube-2026-11-07:S</pre>
-      <p class="note">Why 4, not 5: with 5 entries the five-code worst case is 5 × 52 + 4 = <strong>264 chars</strong> — over the limit. The v4.1 claim that a 5-entry cap holds for any number of types per day was wrong: it only proved three types per day (5 × 42 + 4 = 214). The canonical code set has five types (papier, bio, metale, zmieszane, szklo); a five-code key is 52 chars. With a 4-entry cap the bound holds across the complete five-code vocabulary, with no assumption. A 4-entry log covers roughly 2–4 days at the MVP’s at-most-two-events-per-day rate. The verified schedule has exactly one type per date; two types on a day is a safety margin, five is the absolute bound.</p>
+      <p class="note">Why 4, not 5: with 5 entries the five-code worst case is 5 × 52 + 4 = <strong>264 chars</strong> — over the limit. The v4.1 claim that a 5-entry cap holds for any number of types per day was wrong: it only proved three types per day (5 × 42 + 4 = 214). The canonical code set has five types (papier, bio, metale, zmieszane, szklo); a five-code key is 52 chars. With a 4-entry cap the bound holds across the complete five-code vocabulary, with no assumption. A 4-entry log covers 2 days at the maximum two events/day, and up to 4 days at one event/day. The verified schedule has exactly one type per date; two types on a day is a safety margin, five is the absolute bound.</p>
     </div>
   </section>
 
@@ -360,7 +360,7 @@ youtube-2026-11-07:S</pre>
   </section>
 
   <footer>
-    Pre-build mockup v4.2 for issue #48 — design and review only. Album view follows the live production dashboard (v4 rail, 120px; photo slideshow with clock overlay); the Alerts tile is the proposed addition, placed as a bottom strip on the Album view, display-only with no buttons in v1. No Home Assistant connection, no live data, no notifications are sent from this page. Schedule shown: single-family Mokronos Górny, as verified 7 Nov 2026. Supersedes the v4.1 mockup (5-entry cap, corrected here to 4 entries).
+    Pre-build mockup v4.3 for issue #48 — design and review only. Album view follows the live production dashboard (v4 rail, 120px; photo slideshow with clock overlay); the Alerts tile is the proposed addition, placed as a bottom strip on the Album view, display-only with no buttons in v1. No Home Assistant connection, no live data, no notifications are sent from this page. Schedule shown: single-family Mokronos Górny, as verified 7 Nov 2026. Supersedes the v4.2 mockup (4-entry cap; this pass adds the explicit max: 255 helper configuration).
   </footer>
 </main>
 
