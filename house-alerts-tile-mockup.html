@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:," />
+<title>House Alerts Tile Mockup</title>
+<style>
+  /* ---- Mockup page chrome (not the tablet) ---- */
+  :root{
+    --bg:#e9edef; --page:#f7f8f8; --surface:#ffffff;
+    --ink:#17242b; --muted:#5b6d76; --line:#d3dbde;
+    --accent:#026aa1;
+    --ok:#247a2e; --ok-bg:#e6f4e7;
+    --warn:#8a5a00; --warn-bg:#fff1c2; --warn-line:#e6b93d;
+    --alert:#9e1b14; --alert-bg:#fde8e6; --alert-line:#e5736b;
+    --unknown:#4a5560; --unknown-bg:#e8ecee;
+    --phone:#e7ddd0; --wa:#075e54; --wa-bubble:#dcf8c6;
+    --shadow:0 10px 28px rgba(23,36,43,.14);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,-apple-system,"Segoe UI",sans-serif;font-size:18px;line-height:1.5}
+  a{color:var(--accent)}
+  .wrap{max-width:1060px;margin:0 auto;padding:20px 18px 48px}
+  .top{border-top:6px solid var(--accent);background:var(--page);border-bottom:1px solid var(--line);padding:22px 0 18px}
+  .top .wrap{padding-top:0;padding-bottom:0}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .badge{font-family:ui-monospace,monospace;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border:1.5px solid var(--ink);border-radius:999px}
+  .badge.design{background:var(--ink);color:var(--page)}
+  .badge.prop{border-color:var(--warn-line);background:var(--warn-bg);color:var(--warn)}
+  h1{font-size:36px;line-height:1.05;margin:0 0 10px;font-weight:800;letter-spacing:-.02em}
+  .lede{font-size:20px;color:var(--muted);max-width:46em;margin:0}
+  .lede strong{color:var(--ink)}
+  .controls{margin:26px 0 14px}
+  .controls-label{font-weight:700;font-size:20px;margin:0 0 10px}
+  .state-tabs{display:flex;flex-wrap:wrap;gap:10px}
+  .tab{flex:1 1 200px;min-height:64px;padding:12px 14px;text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:12px;cursor:pointer;font:inherit;font-weight:700;font-size:18px;color:var(--ink);display:flex;gap:10px;align-items:center}
+  .tab .dot{width:16px;height:16px;border-radius:50%;flex:none;border:2px solid rgba(0,0,0,.15)}
+  .tab[aria-selected="true"]{border-color:var(--accent);box-shadow:0 0 0 3px rgba(2,106,161,.25)}
+  .tab small{display:block;font-weight:400;font-size:15px;color:var(--muted)}
+  .navrow{display:flex;gap:10px;margin-top:12px;align-items:center}
+  .navbtn{min-height:56px;min-width:56px;padding:10px 20px;font:inherit;font-weight:700;font-size:18px;border-radius:10px;border:2px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer}
+  .navbtn:active{transform:translateY(1px)}
+  .counter{font-family:ui-monospace,monospace;font-size:16px;color:var(--muted);margin-left:6px}
+  /* ---- Tablet frame ---- */
+  .tablet{background:#111;border-radius:22px;padding:14px;box-shadow:var(--shadow);max-width:832px;margin:6px auto 0}
+  .screen{background:#fafafa;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  /* ---- Inside the screen: the real Home view design (dashboard-kiosk.json) ---- */
+  .ha-bar{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .ha-bar .home{font-size:24px;font-weight:700}
+  .ha-bar .when{font-size:16px;color:#5f6368;text-align:right;font-family:ui-monospace,monospace}
+  .dash{padding:16px;display:flex;flex-direction:column;gap:16px}
+  .ha-card{background:#fff;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.14);padding:16px}
+  .toprow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .clock-card{text-align:center}
+  .clock-card .time{font-size:44px;font-weight:300;line-height:1.1}
+  .clock-card .date{font-size:20px;color:#5f6368;margin-top:4px}
+  .weather-card{display:flex;align-items:center;gap:16px}
+  .weather-card .temp{font-size:44px;font-weight:300;line-height:1}
+  .weather-card .cond{font-size:20px;font-weight:500}
+  .weather-card .loc{font-size:17px;color:#5f6368}
+  /* Alerts tile — the proposed addition, full-width above the shutter grid */
+  .alerts-card{border-top:5px solid var(--ok);display:flex;flex-direction:column}
+  .alerts-card .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .alerts-card h3{margin:0;font-size:17px;text-transform:uppercase;letter-spacing:.07em;color:#5f6368;font-weight:700}
+  .pill{font-size:14px;font-weight:600;padding:5px 9px;border-radius:999px;white-space:nowrap}
+  .tile-main{display:flex;gap:16px;align-items:flex-start;margin-top:10px}
+  .iconbox{width:64px;height:64px;border-radius:14px;display:grid;place-items:center;flex:none}
+  .iconbox svg{width:36px;height:36px}
+  .tile-title{font-size:28px;line-height:1.15;font-weight:700;margin:0 0 6px}
+  .tile-body{font-size:21px;line-height:1.4;margin:0 0 6px}
+  .tile-next{font-size:20px;color:#5f6368;margin:0}
+  .tile-next strong{color:var(--ink)}
+  .tile-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+  .tile-btn{min-height:52px;padding:12px 18px;font:inherit;font-size:19px;font-weight:500;border-radius:10px;cursor:pointer;border:1px solid #dadce0;background:#fff;color:#1a73e8}
+  .tile-btn.primary{background:#03a9f4;border-color:#03a9f4;color:#fff}
+  /* state themes */
+  .alerts-card[data-state="clear"]{border-top-color:var(--ok)} .alerts-card[data-state="clear"] .iconbox{background:var(--ok-bg);color:var(--ok)} .alerts-card[data-state="clear"] .pill{background:var(--ok-bg);color:var(--ok)}
+  .alerts-card[data-state="garbage"]{border-top-color:var(--warn-line)} .alerts-card[data-state="garbage"] .iconbox{background:var(--warn-bg);color:var(--warn)} .alerts-card[data-state="garbage"] .pill{background:var(--warn-bg);color:var(--warn)}
+  .alerts-card[data-state="youtube"]{border-top-color:var(--alert-line)} .alerts-card[data-state="youtube"] .iconbox{background:var(--alert-bg);color:var(--alert)} .alerts-card[data-state="youtube"] .pill{background:var(--alert-bg);color:var(--alert)}
+  .alerts-card[data-state="unknown"]{border-top-color:var(--unknown);border-top-style:dashed} .alerts-card[data-state="unknown"] .iconbox{background:var(--unknown-bg);color:var(--unknown)} .alerts-card[data-state="unknown"] .pill{background:var(--unknown-bg);color:var(--unknown)}
+  /* Shutter grid — the real Home view: grid, 2 columns, ha-shutter-card */
+  .shutter-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .shutter-card{padding:16px}
+  .shutter-name{font-size:20px;font-weight:600;margin-bottom:12px;text-align:center}
+  .shutter-btns{display:flex;gap:8px;justify-content:center}
+  .shutter-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;background:#03a9f4;color:#fff;border:none;font-size:14px;font-weight:500;cursor:pointer;min-height:70px;justify-content:center;font-family:inherit}
+  .shutter-btn .ic{font-size:22px;line-height:1}
+  .shutter-btn.stop{background:#5f6368}
+  .caption{max-width:832px;margin:14px auto 0;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:16px 18px;font-size:19px}
+  .caption strong{display:block;font-size:20px;margin-bottom:4px}
+  section.block{margin-top:44px}
+  h2{font-size:28px;margin:0 0 8px;font-weight:800;letter-spacing:-.01em}
+  .section-lede{font-size:19px;color:var(--muted);margin:0 0 18px;max-width:48em}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .panel h3{margin:0 0 4px;font-size:22px}
+  .panel .who{font-size:17px;color:var(--muted);margin:0 0 14px}
+  .phone{background:var(--phone);border-radius:12px;padding:14px}
+  .wa-head{background:var(--wa);color:#fff;margin:-14px -14px 12px;padding:12px 14px;border-radius:12px 12px 0 0;font-weight:700;font-size:17px}
+  .wa-head span{display:block;font-weight:400;font-size:14px;opacity:.9}
+  .bubble{background:var(--wa-bubble);border-radius:10px;padding:12px 14px;font-size:19px;line-height:1.4;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .bubble .time{display:block;text-align:right;font-size:14px;color:var(--muted);margin-top:6px;font-family:ui-monospace,monospace}
+  .note{font-size:17px;color:var(--muted);margin:12px 0 0}
+  .behaviour{display:grid;gap:12px}
+  .brow{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;display:grid;grid-template-columns:200px 1fr;gap:8px 20px}
+  .brow h3{margin:0;font-size:21px}
+  .brow dl{margin:0;display:grid;grid-template-columns:130px 1fr;gap:4px 14px;font-size:18px}
+  .brow dt{font-weight:700;color:var(--muted)} .brow dd{margin:0}
+  .tag{display:inline-block;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-line);padding:2px 7px;border-radius:999px;vertical-align:2px}
+  .tag.verified{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+  .split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .split .panel ul{margin:8px 0 0;padding-left:20px;font-size:18px}
+  .split .panel li{margin-bottom:8px}
+  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;font-size:16px;color:var(--muted)}
+  @media (max-width:720px){
+    h1{font-size:30px}
+    .tablet{padding:8px;border-radius:16px}
+    .dash{padding:12px;gap:12px}
+    .toprow{grid-template-columns:1fr}
+    .clock-card .time,.weather-card .temp{font-size:34px}
+    .tile-title{font-size:26px}
+    .grid2,.split{grid-template-columns:1fr}
+    .brow{grid-template-columns:1fr}
+    .brow dl{grid-template-columns:110px 1fr}
+    .tab{flex:1 1 100%}
+  }
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="badges">
+      <span class="badge design">Design only — Mockup</span>
+      <span class="badge">Issue #48 · House Alerts</span>
+      <span class="badge prop">Values marked “proposed” are not decisions</span>
+    </div>
+    <h1>House Alerts tile — how it would look on the Home dashboard</h1>
+    <p class="lede">A pre-build mockup for review, drawn in the <strong>actual Home view design</strong> from the hall tablet: clock + weather on top, then the proposed Alerts tile, then the four shutter cards (Kid, Master, TV Area, Sofa) — the same <strong>ha-card</strong> cards and blue Open / Stop / Close buttons the dashboard already uses. Nothing here is connected to Home Assistant, and neither tablet changes. Use the controls below to walk the Alerts tile through its four states.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- STATE SWITCHER -->
+  <div class="controls" role="group" aria-label="Tile state switcher">
+    <p class="controls-label" id="switch-label">1 — Choose a tile state</p>
+    <div class="state-tabs" role="tablist" aria-labelledby="switch-label" id="tabs">
+      <button class="tab" role="tab" data-go="0" aria-selected="true"><span class="dot" style="background:var(--ok)"></span><span>All clear<small>No active alert</small></span></button>
+      <button class="tab" role="tab" data-go="1" aria-selected="false"><span class="dot" style="background:var(--warn-line)"></span><span>Bin reminder<small>Collection tomorrow</small></span></button>
+      <button class="tab" role="tab" data-go="2" aria-selected="false"><span class="dot" style="background:var(--alert-line)"></span><span>YouTube alert<small>Threshold reached today</small></span></button>
+      <button class="tab" role="tab" data-go="3" aria-selected="false"><span class="dot" style="background:var(--unknown)"></span><span>Schedule unknown<small>Source unavailable</small></span></button>
+    </div>
+    <div class="navrow">
+      <button class="navbtn" id="prevBtn" type="button">← Previous state</button>
+      <button class="navbtn" id="nextBtn" type="button">Next state →</button>
+      <span class="counter" id="counter" aria-live="polite">State 1 of 4</span>
+    </div>
+  </div>
+
+  <!-- TABLET — the real Home view (dashboard-kiosk.json): clock + weather, Alerts tile (proposed), 2-column shutter grid -->
+  <div class="tablet" aria-label="Mockup of the Home dashboard on the hall tablet">
+    <div class="screen">
+      <div class="ha-bar">
+        <span class="home">Home</span>
+        <span class="when" id="haWhen">Sat 7 Nov · 18:42<br>Mokronos Górny</span>
+      </div>
+      <div class="dash">
+        <div class="toprow">
+          <div class="ha-card clock-card"><div class="time" id="clockTime">18:42</div><div class="date">Saturday, 7 November</div></div>
+          <div class="ha-card weather-card"><div class="temp">7°</div><div><div class="cond">Overcast</div><div class="loc">Mokronos Górny · illustrative</div></div></div>
+        </div>
+
+        <article class="ha-card alerts-card" id="tile" data-state="clear" aria-live="polite">
+          <div class="head">
+            <h3>Alerts</h3>
+            <span class="pill" id="tilePill">No alerts</span>
+          </div>
+          <div class="tile-main">
+            <div class="iconbox" id="tileIcon"></div>
+            <div>
+              <h4 class="tile-title" id="tileTitle">All clear</h4>
+              <p class="tile-body" id="tileBody">Next collection: Papier — Mon 9 Nov</p>
+              <p class="tile-next" id="tileNext">YouTube today: <strong>0h 23m</strong></p>
+            </div>
+          </div>
+          <div class="tile-actions">
+            <button class="tile-btn primary" type="button" id="tilePrimary">View schedule</button>
+            <button class="tile-btn" type="button" id="tileSecondary">Full schedule</button>
+          </div>
+        </article>
+
+        <div class="shutter-grid" aria-label="Shutter cards (existing Home view)">
+          <div class="ha-card shutter-card"><div class="shutter-name">Kid</div><div class="shutter-btns"><button class="shutter-btn" type="button"><span class="ic">▲</span>Open</button><button class="shutter-btn stop" type="button"><span class="ic">■</span>Stop</button><button class="shutter-btn" type="button"><span class="ic">▼</span>Close</button></div></div>
+          <div class="ha-card shutter-card"><div class="shutter-name">Master</div><div class="shutter-btns"><button class="shutter-btn" type="button"><span class="ic">▲</span>Open</button><button class="shutter-btn stop" type="button"><span class="ic">■</span>Stop</button><button class="shutter-btn" type="button"><span class="ic">▼</span>Close</button></div></div>
+          <div class="ha-card shutter-card"><div class="shutter-name">TV Area</div><div class="shutter-btns"><button class="shutter-btn" type="button"><span class="ic">▲</span>Open</button><button class="shutter-btn stop" type="button"><span class="ic">■</span>Stop</button><button class="shutter-btn" type="button"><span class="ic">▼</span>Close</button></div></div>
+          <div class="ha-card shutter-card"><div class="shutter-name">Sofa</div><div class="shutter-btns"><button class="shutter-btn" type="button"><span class="ic">▲</span>Open</button><button class="shutter-btn stop" type="button"><span class="ic">■</span>Stop</button><button class="shutter-btn" type="button"><span class="ic">▼</span>Close</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caption" id="caption" aria-live="polite"></div>
+
+  <!-- NOTIFICATIONS -->
+  <section class="block" aria-labelledby="notif-h">
+    <h2 id="notif-h">2 — What the phone messages would say</h2>
+    <p class="section-lede">The tile is for anyone glancing at the hall tablet. The phone message is what actually prompts action when nobody is looking at it. Wording below is the proposed draft, not final copy.</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Bin reminder</h3>
+        <p class="who">WhatsApp · to <strong>both adults</strong> <span class="tag">Proposed</span> · at <strong>19:00</strong> the evening before <span class="tag">Proposed</span></p>
+        <div class="phone">
+          <div class="wa-head">House Alerts <span>WhatsApp · both adults</span></div>
+          <div class="bubble">Bins tomorrow — <strong>Mon 9 Nov: Papier i tektura</strong>.<br>Please put the paper bin out tonight.<span class="time">19:00 ✓✓</span></div>
+        </div>
+        <p class="note">Sent once per collection. The following collection in this sequence is <strong>Thu 12 Nov — Biodegradowalne</strong>, which would get its own reminder on Wed 11 Nov at 19:00.</p>
+      </div>
+      <div class="panel">
+        <h3>YouTube threshold</h3>
+        <p class="who">WhatsApp · to the <strong>owner only</strong> <span class="tag">Proposed</span> · when TV YouTube reaches <strong>1 hour</strong> today <span class="tag">Proposed</span></p>
+        <div class="phone">
+          <div class="wa-head">House Alerts <span>WhatsApp · owner only</span></div>
+          <div class="bubble">YouTube on the TV has reached <strong>1 hour today</strong>.<br>No further alerts about this today.<span class="time">16:42 ✓✓</span></div>
+        </div>
+        <p class="note">Counts only the time Home Assistant can confirm YouTube was in the foreground on the TV. The counter runs midnight-to-now in Europe/Warsaw and resets at midnight.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEHAVIOUR -->
+  <section class="block" aria-labelledby="beh-h">
+    <h2 id="beh-h">3 — Who gets what, and when</h2>
+    <p class="section-lede">Anti-spam is part of the design: one message per event per day, no repeats, and an alert expires instead of lingering. If the schedule can’t be read, the tile says so out loud — it never just stays silent.</p>
+    <div class="behaviour">
+      <div class="brow">
+        <h3>Bin reminder</h3>
+        <dl>
+          <dt>Channel</dt><dd>WhatsApp + Alerts tile</dd>
+          <dt>Who</dt><dd>Both adults <span class="tag">Proposed</span></dd>
+          <dt>When</dt><dd>19:00, evening before collection <span class="tag">Proposed</span></dd>
+          <dt>Repeats</dt><dd>None — once per collection</dd>
+          <dt>Expires</dt><dd>Morning of collection day</dd>
+        </dl>
+      </div>
+      <div class="brow">
+        <h3>YouTube threshold</h3>
+        <dl>
+          <dt>Channel</dt><dd>WhatsApp + Alerts tile</dd>
+          <dt>Who</dt><dd>Owner only <span class="tag">Proposed</span></dd>
+          <dt>When</dt><dd>The moment today’s total reaches 1 hour <span class="tag">Proposed</span></dd>
+          <dt>Repeats</dt><dd>None — once per day, resets at midnight</dd>
+          <dt>Expires</dt><dd>At midnight, with the daily counter</dd>
+        </dl>
+      </div>
+      <div class="brow">
+        <h3>Schedule unknown</h3>
+        <dl>
+          <dt>Channel</dt><dd>Alerts tile (prominent) — no WhatsApp spam</dd>
+          <dt>Who</dt><dd>Anyone at the tablet; owner if it stays stale</dd>
+          <dt>When</dt><dd>As soon as a freshness check fails</dd>
+          <dt>Repeats</dt><dd>Tile stays in this state until the source recovers</dd>
+          <dt>Expires</dt><dd>Automatically, once a fresh schedule is read</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATUS SPLIT -->
+  <section class="block" aria-labelledby="split-h">
+    <h2 id="split-h">4 — What’s settled, what’s still a proposal</h2>
+    <p class="section-lede">So this mockup isn’t mistaken for a finished spec:</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Verified <span class="tag verified">Evidence</span></h3>
+        <ul>
+          <li>Schedule is the <strong>single-family</strong> Mokronos Górny variant</li>
+          <li>Next: <strong>Mon 9 Nov — Papier i tektura</strong>, then Thu 12 Nov — Biodegradowalne</li>
+          <li>HA timezone is <strong>Europe/Warsaw</strong> — the YouTube day window is local midnight to now</li>
+          <li>No stable official ICS/API exists; the FX DATA proxy is accepted <em>in principle</em> as primary source</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Proposals <span class="tag">Awaiting your decision</span></h3>
+        <ul>
+          <li>Bin reminder at <strong>19:00</strong> the evening before</li>
+          <li>Bin reminder to <strong>both adults</strong></li>
+          <li>YouTube threshold of <strong>1 hour</strong> per day</li>
+          <li>YouTube alert to the <strong>owner only</strong></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Not in this MVP</h3>
+        <ul>
+          <li>No calendar integration</li>
+          <li>No Fully overlay / full-screen takeover</li>
+          <li>Manual .ics is a provisional, owner-maintained contingency only — not automatic failover</li>
+          <li>Nothing installed or configured yet — installation needs its own review and approval</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Pre-build mockup for issue #48 — design and review only. Home view layout follows the live dashboard (dashboard-kiosk.json: clock + weather, 2-column shutter grid); the Alerts tile is the proposed addition, placed full-width above the shutters. No Home Assistant connection, no live data, no notifications are sent from this page. Schedule shown: single-family Mokronos Górny, as verified 7 Nov 2026.
+  </footer>
+</main>
+
+<script>
+(function(){
+  var icons = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5.5"/></svg>',
+    bin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M10 11v6M14 11v6"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>',
+    off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3"/><path d="M6.3 6.5a8 8 0 1 0 11.4 0"/><path d="M3 3l18 18" stroke-width="2.4"/></svg>'
+  };
+  // Tile copy follows design draft §9.3 (proposed wording). §9.4: no tap-to-acknowledge in v1, no history list.
+  var states = [
+    {
+      key:'clear', pill:'No alerts', icon:icons.check,
+      title:'All clear',
+      body:'Next collection: Papier — Mon 9 Nov',
+      next:'YouTube today: <strong>0h 23m</strong>',
+      primary:'View schedule', secondary:'Full schedule',
+      when:'Sat 7 Nov · 18:42', clock:'18:42',
+      captionTitle:'State 1 — No active alert',
+      caption:'The resting state. The tile still earns its space by showing the next collection and today’s YouTube total, so a glance confirms the system is working — it isn’t just empty.'
+    },
+    {
+      key:'garbage', pill:'Tomorrow', icon:icons.bin,
+      title:'Tomorrow: Papier',
+      body:'Put out tonight — collection Mon 9 Nov.',
+      next:'After that: <strong>Thu 12 Nov — Biodegradowalne</strong>',
+      primary:'View schedule', secondary:'Full schedule',
+      when:'Sun 8 Nov · 19:00', clock:'19:00',
+      captionTitle:'State 2 — Upcoming garbage reminder',
+      caption:'From 19:00 the evening before collection (proposed), the tile turns amber and the same message goes by WhatsApp to both adults (proposed). There is no acknowledge button in v1 — the tile clears on its own on collection morning.'
+    },
+    {
+      key:'youtube', pill:'Alert · today', icon:icons.play,
+      title:'YouTube: 1h reached',
+      body:'1h 12m today — no repeat alert today.',
+      next:'Counter resets at <strong>midnight tonight</strong>',
+      primary:'OK', secondary:'Today’s viewing',
+      when:'Sat 7 Nov · 16:42', clock:'16:42',
+      captionTitle:'State 3 — Active YouTube threshold alert',
+      caption:'Shown when today’s confirmed YouTube time on the TV reaches 1 hour (proposed). The WhatsApp goes to the owner only (proposed). It fires once per day — reaching 2 hours does not trigger another message.'
+    },
+    {
+      key:'unknown', pill:'Check needed', icon:icons.off,
+      title:'Schedule unknown',
+      body:'Check the garbage schedule — the last read failed.',
+      next:'Last known: <strong>Mon 9 Nov — Papier i tektura</strong> · may be out of date',
+      primary:'Retry check', secondary:'Last known schedule',
+      when:'Sat 7 Nov · 18:42', clock:'18:42',
+      captionTitle:'State 4 — Schedule unknown / source unavailable',
+      caption:'The failure state, shown explicitly instead of silently skipping a reminder. The tile keeps showing the last known collection, clearly marked as possibly out of date, and clears itself once a fresh schedule is read.'
+    }
+  ];
+  var idx = 0;
+  var tile = document.getElementById('tile');
+  var pill = document.getElementById('tilePill');
+  var icon = document.getElementById('tileIcon');
+  var title = document.getElementById('tileTitle');
+  var body = document.getElementById('tileBody');
+  var next = document.getElementById('tileNext');
+  var primary = document.getElementById('tilePrimary');
+  var secondary = document.getElementById('tileSecondary');
+  var when = document.getElementById('haWhen');
+  var clock = document.getElementById('clockTime');
+  var caption = document.getElementById('caption');
+  var counter = document.getElementById('counter');
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+
+  function render(){
+    var s = states[idx];
+    tile.setAttribute('data-state', s.key);
+    pill.textContent = s.pill;
+    icon.innerHTML = s.icon;
+    title.textContent = s.title;
+    body.textContent = s.body;
+    next.innerHTML = s.next;
+    primary.textContent = s.primary;
+    secondary.textContent = s.secondary;
+    when.innerHTML = s.when + '<br>Mokronos Górny';
+    clock.textContent = s.clock;
+    caption.innerHTML = '<strong></strong><span></span>';
+    caption.querySelector('strong').textContent = s.captionTitle;
+    caption.querySelector('span').textContent = s.caption;
+    counter.textContent = 'State ' + (idx+1) + ' of ' + states.length;
+    tabs.forEach(function(t,i){ t.setAttribute('aria-selected', i===idx ? 'true' : 'false'); });
+  }
+  function go(n){ idx = ((n % states.length) + states.length) % states.length; render(); }
+  tabs.forEach(function(t){ t.addEventListener('click', function(){ go(parseInt(t.getAttribute('data-go'),10)); }); });
+  document.getElementById('nextBtn').addEventListener('click', function(){ go(idx+1); });
+  document.getElementById('prevBtn').addEventListener('click', function(){ go(idx-1); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight') go(idx+1);
+    if(e.key === 'ArrowLeft') go(idx-1);
+  });
+  // Tile buttons are illustrative in a mockup: give tactile feedback only.
+  [primary, secondary].forEach(function(b){
+    b.addEventListener('click', function(){
+      var old = b.textContent; b.textContent = 'Mockup only — no action';
+      setTimeout(function(){ b.textContent = old; }, 1200);
+    });
+  });
+  render();
+})();
+</script>
+</body>
+</html>
