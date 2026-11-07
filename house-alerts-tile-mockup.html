@@ -247,15 +247,15 @@
     </div>
     <div class="panel" style="margin-top:16px">
       <h3>Dispatch log — <code>input_text.alerts_dispatch_log</code></h3>
-      <p class="who">Format: comma-separated <code>key:status</code> pairs, newest last; status one letter (<code>P</code> pending, <code>S</code> sent, <code>F</code> failed, <code>U</code> unknown, <code>M</code> missed). Longest key is a two-type garbage key: <code>garbage-</code> (8) + <code>YYYYMMDD</code> (8) + <code>-metale</code> (7) + <code>-zmieszane</code> (10) = 33 chars, plus <code>:U</code> (2) = <strong>35 chars per entry</strong>. Cap: <strong>6 entries</strong> (reduced from 7 — see below).</p>
-      <pre>garbage-20261109-metale-zmieszane:U,garbage-20261112-metale-zmieszane:U,
-garbage-20261116-metale-zmieszane:U,garbage-20261117-metale-zmieszane:U,
-garbage-20261118-metale-zmieszane:U,garbage-20261123-metale-zmieszane:U
-6 entries × 35 chars + 5 commas = 210 + 5 = 215 chars  ≤  255  ✓
-Realistic mixed example (157 chars):
+      <p class="who">Format: comma-separated <code>key:status</code> pairs, newest last; status one letter (<code>P</code> pending, <code>S</code> sent, <code>F</code> failed, <code>U</code> unknown, <code>M</code> missed). Longest key is a three-type garbage key: <code>garbage-</code> (8) + <code>YYYYMMDD</code> (8) + <code>-metale</code> (7) + <code>-papier</code> (7) + <code>-zmieszane</code> (10) = 40 chars, plus <code>:U</code> (2) = <strong>42 chars per entry</strong>. Cap: <strong>5 entries</strong>.</p>
+      <pre>garbage-20261109-metale-papier-zmieszane:U,garbage-20261112-metale-papier-zmieszane:U,
+garbage-20261116-metale-papier-zmieszane:U,garbage-20261117-metale-papier-zmieszane:U,
+garbage-20261118-metale-papier-zmieszane:U
+5 entries × 42 chars + 4 commas = 210 + 4 = 214 chars  ≤  255  ✓
+Realistic mixed example (134 chars):
 garbage-20261109-metale-zmieszane:U,garbage-20261112-bio:S,garbage-20261116-metale:S,
-garbage-20261117-zmieszane:S,garbage-20261118-bio:S,youtube-2026-11-07:S</pre>
-      <p class="note">Why 6, not 7: with 7 entries the worst case is 7 × 35 + 6 = <strong>251 chars</strong> — it fits, but with only 4 characters to spare, and only if no day ever carries three collection types (a three-type key is 41 chars; 7 × 41 + 6 = 293 &gt; 255). With a 6-entry cap even the three-type worst case fits (6 × 41 + 5 = 251 ≤ 255), so the bound holds with no assumption about types per day. The verified schedule has exactly one type per date; two is a safety margin, three is the absolute bound. A 6-entry log covers roughly 3–6 days at the MVP’s at-most-two-events-per-day rate.</p>
+garbage-20261117-zmieszane:S,youtube-2026-11-07:S</pre>
+      <p class="note">Why 5, not 6: with 6 entries the three-type worst case is 6 × 42 + 5 = <strong>257 chars</strong> — over the limit. The v4 draft stated the three-type entry as 41 chars (it counted szklo as 6 letters; szklo has 5 — the three longest codes are zmieszane 9, metale 6, papier 6). With a 5-entry cap the bound holds for any number of types per day, with no assumption. A 5-entry log covers roughly 2–5 days at the MVP’s at-most-two-events-per-day rate. The verified schedule has exactly one type per date; two types on a day is a safety margin, three is the absolute bound.</p>
     </div>
   </section>
 
