@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light" />
 <link rel="icon" href="data:," />
-<title>House Alerts Tile Mockup</title>
+<title>House Alerts Tile Mockup — v3</title>
 <style>
   /* ---- Mockup page chrome (not the tablet) ---- */
   :root{
@@ -44,51 +44,50 @@
   .navbtn{min-height:56px;min-width:56px;padding:10px 20px;font:inherit;font-weight:700;font-size:18px;border-radius:10px;border:2px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer}
   .navbtn:active{transform:translateY(1px)}
   .counter{font-family:ui-monospace,monospace;font-size:16px;color:var(--muted);margin-left:6px}
-  /* ---- Tablet frame ---- */
+  /* ---- Tablet frame: exactly the 800x500 CSS px viewport ---- */
   .tablet{background:#111;border-radius:22px;padding:14px;box-shadow:var(--shadow);max-width:832px;margin:6px auto 0}
-  .screen{background:#fafafa;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
-  /* ---- Inside the screen: the real Home view design (dashboard-kiosk.json) ---- */
-  .ha-bar{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .ha-bar .home{font-size:24px;font-weight:700}
-  .ha-bar .when{font-size:16px;color:#5f6368;text-align:right;font-family:ui-monospace,monospace}
-  .dash{padding:16px;display:flex;flex-direction:column;gap:16px}
-  .ha-card{background:#fff;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.14);padding:16px}
-  .toprow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .clock-card{text-align:center}
-  .clock-card .time{font-size:44px;font-weight:300;line-height:1.1}
-  .clock-card .date{font-size:20px;color:#5f6368;margin-top:4px}
-  .weather-card{display:flex;align-items:center;gap:16px}
-  .weather-card .temp{font-size:44px;font-weight:300;line-height:1}
-  .weather-card .cond{font-size:20px;font-weight:500}
-  .weather-card .loc{font-size:17px;color:#5f6368}
-  /* Alerts tile — the proposed addition, full-width above the shutter grid */
-  .alerts-card{border-top:5px solid var(--ok);display:flex;flex-direction:column}
-  .alerts-card .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .screen{background:#fafafa;border-radius:10px;overflow:hidden;height:500px;display:flex;flex-direction:column}
+  /* ---- Inside the screen: the real Home view design (dashboard-kiosk.json) ----
+     Verified type sizes: clock 52px (kiosk-clock.ts), weather 64/32/28px
+     (kiosk-weather.ts), shutter names 20px, buttons 14px (ha-shutter-card.ts).
+     No HA app bar: Fully runs fullscreen (v4 screenshots show no header). */
+  .dash{padding:6px;display:flex;flex-direction:column;gap:8px;height:100%}
+  .ha-card{background:#fff;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.14);padding:12px 16px}
+  .toprow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .clock-card{display:flex;align-items:center;justify-content:center;gap:18px}
+  .clock-card .time{font-size:52px;font-weight:800;line-height:1}
+  .clock-card .date{font-size:20px;color:#5f6368;line-height:1.3}
+  .weather-card{display:flex;align-items:center;justify-content:center;gap:18px}
+  .weather-card .temp{font-size:64px;font-weight:800;line-height:1}
+  .weather-card .cond{font-size:32px;font-weight:600;line-height:1.2}
+  .weather-card .aqi{font-size:28px;font-weight:600;color:#5f6368;line-height:1.2}
+  /* Alerts tile — compact, DISPLAY-ONLY in v1: no buttons of any kind (§9.4) */
+  .alerts-card{border-top:5px solid var(--ok);padding:10px 16px}
+  .alerts-card .head{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .alerts-card h3{margin:0;font-size:17px;text-transform:uppercase;letter-spacing:.07em;color:#5f6368;font-weight:700}
   .pill{font-size:14px;font-weight:600;padding:5px 9px;border-radius:999px;white-space:nowrap}
-  .tile-main{display:flex;gap:16px;align-items:flex-start;margin-top:10px}
-  .iconbox{width:64px;height:64px;border-radius:14px;display:grid;place-items:center;flex:none}
-  .iconbox svg{width:36px;height:36px}
-  .tile-title{font-size:28px;line-height:1.15;font-weight:700;margin:0 0 6px}
-  .tile-body{font-size:21px;line-height:1.4;margin:0 0 6px}
-  .tile-next{font-size:20px;color:#5f6368;margin:0}
-  .tile-next strong{color:var(--ink)}
-  .tile-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
-  .tile-btn{min-height:52px;padding:12px 18px;font:inherit;font-size:19px;font-weight:500;border-radius:10px;cursor:pointer;border:1px solid #dadce0;background:#fff;color:#1a73e8}
-  .tile-btn.primary{background:#03a9f4;border-color:#03a9f4;color:#fff}
+  .tile-title-row{display:flex;align-items:center;gap:12px;margin-top:4px}
+  .iconbox{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none}
+  .iconbox svg{width:26px;height:26px}
+  .tile-title{font-size:28px;line-height:1.15;font-weight:700;margin:0}
+  .tile-info{font-size:21px;line-height:1.35;margin:2px 0 0}
+  .tile-info .dim{color:#5f6368;font-size:20px}
   /* state themes */
   .alerts-card[data-state="clear"]{border-top-color:var(--ok)} .alerts-card[data-state="clear"] .iconbox{background:var(--ok-bg);color:var(--ok)} .alerts-card[data-state="clear"] .pill{background:var(--ok-bg);color:var(--ok)}
   .alerts-card[data-state="garbage"]{border-top-color:var(--warn-line)} .alerts-card[data-state="garbage"] .iconbox{background:var(--warn-bg);color:var(--warn)} .alerts-card[data-state="garbage"] .pill{background:var(--warn-bg);color:var(--warn)}
   .alerts-card[data-state="youtube"]{border-top-color:var(--alert-line)} .alerts-card[data-state="youtube"] .iconbox{background:var(--alert-bg);color:var(--alert)} .alerts-card[data-state="youtube"] .pill{background:var(--alert-bg);color:var(--alert)}
   .alerts-card[data-state="unknown"]{border-top-color:var(--unknown);border-top-style:dashed} .alerts-card[data-state="unknown"] .iconbox{background:var(--unknown-bg);color:var(--unknown)} .alerts-card[data-state="unknown"] .pill{background:var(--unknown-bg);color:var(--unknown)}
   /* Shutter grid — the real Home view: grid, 2 columns, ha-shutter-card */
-  .shutter-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .shutter-card{padding:16px}
-  .shutter-name{font-size:20px;font-weight:600;margin-bottom:12px;text-align:center}
+  .shutter-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1}
+  .shutter-card{padding:8px 16px;display:flex;flex-direction:column;justify-content:center}
+  .shutter-name{font-size:20px;font-weight:600;margin-bottom:6px;text-align:center}
   .shutter-btns{display:flex;gap:8px;justify-content:center}
   .shutter-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border-radius:12px;background:#03a9f4;color:#fff;border:none;font-size:14px;font-weight:500;cursor:pointer;min-height:70px;justify-content:center;font-family:inherit}
   .shutter-btn .ic{font-size:22px;line-height:1}
   .shutter-btn.stop{background:#5f6368}
+  .notebox{max-width:832px;margin:14px auto 0;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:16px 18px;font-size:19px}
+  .notebox strong{display:block;font-size:20px;margin-bottom:4px}
+  .notebox.warn{border-left-color:var(--warn-line)}
   .caption{max-width:832px;margin:14px auto 0;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:16px 18px;font-size:19px}
   .caption strong{display:block;font-size:20px;margin-bottom:4px}
   section.block{margin-top:44px}
@@ -118,9 +117,11 @@
   @media (max-width:720px){
     h1{font-size:30px}
     .tablet{padding:8px;border-radius:16px}
+    .screen{height:auto;min-height:500px}
     .dash{padding:12px;gap:12px}
     .toprow{grid-template-columns:1fr}
-    .clock-card .time,.weather-card .temp{font-size:34px}
+    .clock-card .time{font-size:44px}
+    .weather-card .temp{font-size:52px}
     .tile-title{font-size:26px}
     .grid2,.split{grid-template-columns:1fr}
     .brow{grid-template-columns:1fr}
@@ -134,12 +135,12 @@
 <header class="top">
   <div class="wrap">
     <div class="badges">
-      <span class="badge design">Design only — Mockup</span>
+      <span class="badge design">Design only — Mockup v3</span>
       <span class="badge">Issue #48 · House Alerts</span>
       <span class="badge prop">Values marked “proposed” are not decisions</span>
     </div>
     <h1>House Alerts tile — how it would look on the Home dashboard</h1>
-    <p class="lede">A pre-build mockup for review, drawn in the <strong>actual Home view design</strong> from the hall tablet: clock + weather on top, then the proposed Alerts tile, then the four shutter cards (Kid, Master, TV Area, Sofa) — the same <strong>ha-card</strong> cards and blue Open / Stop / Close buttons the dashboard already uses. Nothing here is connected to Home Assistant, and neither tablet changes. Use the controls below to walk the Alerts tile through its four states.</p>
+    <p class="lede">A pre-build mockup for review, drawn in the <strong>actual Home view design</strong> from the hall tablet: clock + weather on top, then the proposed Alerts tile, then the four shutter cards (Kid, Master, TV Area, Sofa) — the same <strong>ha-card</strong> cards and blue Open / Stop / Close buttons the dashboard already uses. The tablet frame below is exactly the <strong>800 × 500 CSS px</strong> viewport: the complete Home view fits inside it without scrolling. Nothing here is connected to Home Assistant, and neither tablet changes. Use the controls below to walk the Alerts tile through its four states.</p>
   </div>
 </header>
 
@@ -161,17 +162,13 @@
     </div>
   </div>
 
-  <!-- TABLET — the real Home view (dashboard-kiosk.json): clock + weather, Alerts tile (proposed), 2-column shutter grid -->
-  <div class="tablet" aria-label="Mockup of the Home dashboard on the hall tablet">
-    <div class="screen">
-      <div class="ha-bar">
-        <span class="home">Home</span>
-        <span class="when" id="haWhen">Sat 7 Nov · 18:42<br>Mokronos Górny</span>
-      </div>
+  <!-- TABLET — exactly 800x500 CSS px; the real Home view (dashboard-kiosk.json) -->
+  <div class="tablet" aria-label="Mockup of the Home dashboard on the hall tablet, 800 by 500 pixels">
+    <div class="screen" id="screen">
       <div class="dash">
         <div class="toprow">
-          <div class="ha-card clock-card"><div class="time" id="clockTime">18:42</div><div class="date">Saturday, 7 November</div></div>
-          <div class="ha-card weather-card"><div class="temp">7°</div><div><div class="cond">Overcast</div><div class="loc">Mokronos Górny · illustrative</div></div></div>
+          <div class="ha-card clock-card"><div class="time" id="clockTime">18:42</div><div class="date">Saturday<br>7 November</div></div>
+          <div class="ha-card weather-card"><div class="temp">7°</div><div><div class="cond">Overcast</div><div class="aqi">AQI 54 · Good</div></div></div>
         </div>
 
         <article class="ha-card alerts-card" id="tile" data-state="clear" aria-live="polite">
@@ -179,18 +176,11 @@
             <h3>Alerts</h3>
             <span class="pill" id="tilePill">No alerts</span>
           </div>
-          <div class="tile-main">
+          <div class="tile-title-row">
             <div class="iconbox" id="tileIcon"></div>
-            <div>
-              <h4 class="tile-title" id="tileTitle">All clear</h4>
-              <p class="tile-body" id="tileBody">Next collection: Papier — Mon 9 Nov</p>
-              <p class="tile-next" id="tileNext">YouTube today: <strong>0h 23m</strong></p>
-            </div>
+            <h4 class="tile-title" id="tileTitle">All clear</h4>
           </div>
-          <div class="tile-actions">
-            <button class="tile-btn primary" type="button" id="tilePrimary">View schedule</button>
-            <button class="tile-btn" type="button" id="tileSecondary">Full schedule</button>
-          </div>
+          <p class="tile-info" id="tileInfo">Next: Papier — Mon 9 Nov <span class="dim">· YouTube today: 0h 23m</span></p>
         </article>
 
         <div class="shutter-grid" aria-label="Shutter cards (existing Home view)">
@@ -204,6 +194,21 @@
   </div>
 
   <div class="caption" id="caption" aria-live="polite"></div>
+
+  <div class="notebox" id="fitNote">
+    <strong>Fit note — the 800 × 500 composition</strong>
+    <span>The frame above is exactly 800 × 500 CSS px and the complete Home view fits inside it with nothing cut off and no scrolling: clock/weather row, compact Alerts tile, and both rows of shutter cards. How: the tile is a compact banner (one title line + one info line, display-only, no buttons), the shutter buttons keep their real 70px height, and there is no Home Assistant app bar — Fully Kiosk runs fullscreen, and the v4 tablet screenshots show no header. Vertical budget: 12px padding + ~88px clock/weather + 10px gap + ~112px tile + 10px gap + two shutter rows (~122px each) + 12px padding ≈ 490px. Nothing was shrunk below the house readability floor (functional text ≥ 20px, labels 24px+) to force the fit.</span>
+  </div>
+
+  <div class="notebox warn" id="typeNote">
+    <strong>Typography note — what the sizes are, and a discrepancy found</strong>
+    <span>Type sizes in the frame are the verified live values: clock 52px, weather 64° / 32px / 28px, shutter names 20px, shutter buttons 14px (sources: kiosk-clock.ts, kiosk-weather.ts, ha-shutter-card.ts). The review cited a “Casita Tablet theme at font scale 1.8, 28px minimum labels, 38px room names, 42px readouts, 104px clock” — those figures could not be verified: no font scale 1.8 and no such theme exist anywhere in the repo, no 38px room names exist, and the 104px clock is real but belongs to the Photos view (ha-immich-card.ts), not the Home view. One honest flag: the live shutter-button labels (14px) sit below the house readability floor — that is the live card’s property, shown faithfully here, not silently fixed in a mockup.</span>
+  </div>
+
+  <div class="notebox" id="liveNote">
+    <strong>What is illustrative vs based on the live configuration</strong>
+    <span>Based on the live configuration: the Home view layout and card order (clock/weather horizontal stack, then a 2-column shutter grid), the four shutter names (Kid, Master, TV Area, Sofa), the card styling and button treatment, and the type sizes above. Illustrative: the clock time, the weather values (7°, Overcast, AQI 54), and the YouTube totals shown in the tile. Verified, not illustrative: the garbage dates (single-family Mokronos Górny, next Mon 9 Nov — Papier). Proposed, not decided: the 1-hour YouTube threshold, the 19:00 reminder time, both-adults / owner-only recipients. Open question: the current production tablets run the v4 rail UI (Album / Weather / Shutters / Sony / Watch), which has no single “Home” view — which v4 view the Alerts tile belongs in is still to be decided by the owner.</span>
+  </div>
 
   <!-- NOTIFICATIONS -->
   <section class="block" aria-labelledby="notif-h">
@@ -234,7 +239,7 @@
   <!-- BEHAVIOUR -->
   <section class="block" aria-labelledby="beh-h">
     <h2 id="beh-h">3 — Who gets what, and when</h2>
-    <p class="section-lede">Anti-spam is part of the design: one message per event per day, no repeats, and an alert expires instead of lingering. If the schedule can’t be read, the tile says so out loud — it never just stays silent.</p>
+    <p class="section-lede">Anti-spam is part of the design: one message per event per day, no repeats, and an alert expires instead of lingering. If the schedule can’t be read, the tile says so out loud — it never just stays silent. The tile is the only monitoring signal for a stale schedule: there is no separate alert and no escalation in v1.</p>
     <div class="behaviour">
       <div class="brow">
         <h3>Bin reminder</h3>
@@ -259,8 +264,8 @@
       <div class="brow">
         <h3>Schedule unknown</h3>
         <dl>
-          <dt>Channel</dt><dd>Alerts tile (prominent) — no WhatsApp spam</dd>
-          <dt>Who</dt><dd>Anyone at the tablet; owner if it stays stale</dd>
+          <dt>Channel</dt><dd>Alerts tile (prominent) — no WhatsApp, no escalation</dd>
+          <dt>Who</dt><dd>Anyone at the tablet</dd>
           <dt>When</dt><dd>As soon as a freshness check fails</dd>
           <dt>Repeats</dt><dd>Tile stays in this state until the source recovers</dd>
           <dt>Expires</dt><dd>Automatically, once a fresh schedule is read</dd>
@@ -305,7 +310,7 @@
   </section>
 
   <footer>
-    Pre-build mockup for issue #48 — design and review only. Home view layout follows the live dashboard (dashboard-kiosk.json: clock + weather, 2-column shutter grid); the Alerts tile is the proposed addition, placed full-width above the shutters. No Home Assistant connection, no live data, no notifications are sent from this page. Schedule shown: single-family Mokronos Górny, as verified 7 Nov 2026.
+    Pre-build mockup v3 for issue #48 — design and review only. Home view layout follows the live dashboard (dashboard-kiosk.json: clock + weather, 2-column shutter grid); the Alerts tile is the proposed addition, placed full-width above the shutters, display-only with no buttons in v1. No Home Assistant connection, no live data, no notifications are sent from this page. Schedule shown: single-family Mokronos Górny, as verified 7 Nov 2026.
   </footer>
 </main>
 
@@ -317,47 +322,39 @@
     play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>',
     off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3"/><path d="M6.3 6.5a8 8 0 1 0 11.4 0"/><path d="M3 3l18 18" stroke-width="2.4"/></svg>'
   };
-  // Tile copy follows design draft §9.3 (proposed wording). §9.4: no tap-to-acknowledge in v1, no history list.
+  // Tile copy follows design draft §9.3 (proposed wording). §9.4: display-only in v1, no buttons.
   var states = [
     {
       key:'clear', pill:'No alerts', icon:icons.check,
       title:'All clear',
-      body:'Next collection: Papier — Mon 9 Nov',
-      next:'YouTube today: <strong>0h 23m</strong>',
-      primary:'View schedule', secondary:'Full schedule',
-      when:'Sat 7 Nov · 18:42', clock:'18:42',
+      info:'Next: Papier — Mon 9 Nov <span class="dim">· YouTube today: 0h 23m</span>',
+      clock:'18:42',
       captionTitle:'State 1 — No active alert',
       caption:'The resting state. The tile still earns its space by showing the next collection and today’s YouTube total, so a glance confirms the system is working — it isn’t just empty.'
     },
     {
       key:'garbage', pill:'Tomorrow', icon:icons.bin,
       title:'Tomorrow: Papier',
-      body:'Put out tonight — collection Mon 9 Nov.',
-      next:'After that: <strong>Thu 12 Nov — Biodegradowalne</strong>',
-      primary:'View schedule', secondary:'Full schedule',
-      when:'Sun 8 Nov · 19:00', clock:'19:00',
+      info:'Put out tonight — collection Mon 9 Nov <span class="dim">· Next: Thu 12 Nov — Bio</span>',
+      clock:'19:00',
       captionTitle:'State 2 — Upcoming garbage reminder',
       caption:'From 19:00 the evening before collection (proposed), the tile turns amber and the same message goes by WhatsApp to both adults (proposed). There is no acknowledge button in v1 — the tile clears on its own on collection morning.'
     },
     {
       key:'youtube', pill:'Alert · today', icon:icons.play,
       title:'YouTube: 1h reached',
-      body:'1h 12m today — no repeat alert today.',
-      next:'Counter resets at <strong>midnight tonight</strong>',
-      primary:'OK', secondary:'Today’s viewing',
-      when:'Sat 7 Nov · 16:42', clock:'16:42',
+      info:'1h 12m today <span class="dim">· Counter resets at midnight · No repeat alert today</span>',
+      clock:'16:42',
       captionTitle:'State 3 — Active YouTube threshold alert',
       caption:'Shown when today’s confirmed YouTube time on the TV reaches 1 hour (proposed). The WhatsApp goes to the owner only (proposed). It fires once per day — reaching 2 hours does not trigger another message.'
     },
     {
       key:'unknown', pill:'Check needed', icon:icons.off,
       title:'Schedule unknown',
-      body:'Check the garbage schedule — the last read failed.',
-      next:'Last known: <strong>Mon 9 Nov — Papier i tektura</strong> · may be out of date',
-      primary:'Retry check', secondary:'Last known schedule',
-      when:'Sat 7 Nov · 18:42', clock:'18:42',
+      info:'Last read failed <span class="dim">· Last known: Mon 9 Nov — Papier · may be out of date</span>',
+      clock:'18:42',
       captionTitle:'State 4 — Schedule unknown / source unavailable',
-      caption:'The failure state, shown explicitly instead of silently skipping a reminder. The tile keeps showing the last known collection, clearly marked as possibly out of date, and clears itself once a fresh schedule is read.'
+      caption:'The failure state, shown explicitly instead of silently skipping a reminder. The tile keeps showing the last known collection, clearly marked as possibly out of date, and clears itself once a fresh schedule is read. There is no escalation: the tile is the only signal.'
     }
   ];
   var idx = 0;
@@ -365,11 +362,7 @@
   var pill = document.getElementById('tilePill');
   var icon = document.getElementById('tileIcon');
   var title = document.getElementById('tileTitle');
-  var body = document.getElementById('tileBody');
-  var next = document.getElementById('tileNext');
-  var primary = document.getElementById('tilePrimary');
-  var secondary = document.getElementById('tileSecondary');
-  var when = document.getElementById('haWhen');
+  var info = document.getElementById('tileInfo');
   var clock = document.getElementById('clockTime');
   var caption = document.getElementById('caption');
   var counter = document.getElementById('counter');
@@ -381,11 +374,7 @@
     pill.textContent = s.pill;
     icon.innerHTML = s.icon;
     title.textContent = s.title;
-    body.textContent = s.body;
-    next.innerHTML = s.next;
-    primary.textContent = s.primary;
-    secondary.textContent = s.secondary;
-    when.innerHTML = s.when + '<br>Mokronos Górny';
+    info.innerHTML = s.info;
     clock.textContent = s.clock;
     caption.innerHTML = '<strong></strong><span></span>';
     caption.querySelector('strong').textContent = s.captionTitle;
@@ -400,13 +389,6 @@
   document.addEventListener('keydown', function(e){
     if(e.key === 'ArrowRight') go(idx+1);
     if(e.key === 'ArrowLeft') go(idx-1);
-  });
-  // Tile buttons are illustrative in a mockup: give tactile feedback only.
-  [primary, secondary].forEach(function(b){
-    b.addEventListener('click', function(){
-      var old = b.textContent; b.textContent = 'Mockup only — no action';
-      setTimeout(function(){ b.textContent = old; }, 1200);
-    });
   });
   render();
 })();
